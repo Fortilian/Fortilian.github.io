@@ -1,78 +1,140 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Poker Split — PWA</title>
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Poker Split">
-<meta name="theme-color" content="#0A0A0A">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="/favicon.ico?v=2" type="image/x-icon">
-<link rel="icon" href="/favicon-32-dark.png?v=2" sizes="32x32" type="image/png">
-<link rel="icon" href="/favicon-16-dark.png?v=2" sizes="16x16" type="image/png">
-<link rel="icon" type="image/png" media="(prefers-color-scheme: dark)" href="icons/favicon-32-dark.png">
-<link rel="icon" type="image/png" media="(prefers-color-scheme: light)" href="icons/favicon-32-light.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Poker Split — Canvas Preview</title>
+<meta name="theme-color" content="#0A0A0A" />
+<script>
+  const _metaTheme = document.querySelector('meta[name="theme-color"]');
+  function _applyThemeColor(){
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    _metaTheme.setAttribute('content', dark ? '#0c0c0d' : '#ffffff');
+  }
+  _applyThemeColor();
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', _applyThemeColor);
+</script>
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Poker Split" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 <style>
-  :root{--fg:#111;--muted:#666;--line:#ddd;--bg:#fff;--hint:#f6f6f6;--accent:#2860ff;--sticky-h:64px}
-  html,body{background:var(--bg);color:var(--fg);font-family:-apple-system,system-ui,Segoe UI,Roboto;line-height:1.45}
-  body{max-width:1080px;margin:0 auto;padding:12px 12px calc(var(--sticky-h) + env(safe-area-inset-bottom, 0px));}
-  h1{font-size:1.3rem;margin:6px 0 8px}
+  :root{
+    --fg:#0b0b0b;--muted:#6a6a6a;--line:#e5e5e5;--bg:#ffffff;--card:#ffffff;--hint:#f7f7f7;
+    --accent:#2860ff;--input-bg:#ffffff;--input-border:#d7d7d7;--pill-bg:#eef4ff;--pill-border:#d9e2ff;
+    --row-active:#f2f8ff;--row-alt:#fbfbfd;--shadow:0 1px 0 rgba(0,0,0,.02);--sticky-h:68px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --fg:#f5f5f7;--muted:#a1a1a7;--line:#2a2a2e;--bg:#0c0c0d;--card:#121214;--hint:#161617;
+      --accent:#8ab1ff;--input-bg:#0f0f11;--input-border:#2a2a2e;--pill-bg:#22252d;--pill-border:#3b4150;
+      --row-active:#0f1b28;--row-alt:#14161b;--shadow:0 1px 0 rgba(0,0,0,.25);
+    }
+  }
+
+  html,body{background:var(--bg);color:var(--fg);font-family:-apple-system,system-ui,Segoe UI,Roboto,Helvetica,Arial;line-height:1.45;margin:0;padding:0}
+  body{max-width:980px;margin:0 auto;padding:12px 12px calc(var(--sticky-h) + env(safe-area-inset-bottom, 0px));overflow-x:hidden}
+  h1{font-size:1.28rem;margin:8px 0 12px}
+  h3{margin:0 0 8px;font-size:1.02rem}
   .row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0}
-  .row>*{flex:1}
-  .card{border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;background:#fff}
-  .pill{display:inline-block;background:#eef;border:1px solid #cdd;padding:8px 10px;border-radius:999px;margin:4px 6px 0 0;font-size:.98rem;user-select:none}
-  .pill.active{background:#dfe8ff;border-color:#bcd}
-  input,select,button{font:inherit;padding:10px 12px;border-radius:12px;border:1px solid #ccc}
-  button{background:#fff;cursor:pointer}
-  button.primary{background:#2860ff;color:#fff;border-color:#2860ff}
+  .row>*{flex:1;min-width:0}
+  .card{border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0;background:var(--card);box-shadow:var(--shadow);overflow:hidden}
+  .pill{display:inline-flex;align-items:center;gap:8px;background:var(--pill-bg);border:2px solid var(--pill-border);padding:10px 14px;border-radius:9999px;margin:6px 8px 0 0;font-size:1rem;font-weight:600;letter-spacing:0;line-height:1;color:var(--fg);user-select:none;-webkit-tap-highlight-color:transparent;text-rendering:optimizeSpeed;-webkit-font-smoothing:auto;transform:translateZ(0);min-width:clamp(72px, calc(var(--len,8)*0.62ch + 28px), 180px);justify-content:center}
+  .pill.active{background:var(--accent);border-color:var(--accent);color:#fff;-webkit-font-smoothing:auto}
+  input,select,button{font:inherit;padding:10px 12px;border-radius:12px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--fg);max-width:100%;box-sizing:border-box;transition:.15s border-color,.15s box-shadow,.15s transform}
+  input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent)}
+  button:active{transform:translateY(1px)}
+  button.primary{background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 95%, #fff 0%) 0%, var(--accent) 100%);color:#fff;border-color:var(--accent);box-shadow:0 6px 16px rgba(40,96,255,.20)}
+  button:hover{border-color:var(--accent)}
+  .stepper button{min-width:48px}
+  .row-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start}
+  button{cursor:pointer;white-space:nowrap}
   .small{font-size:.92rem;color:var(--muted)}
-  .right{text-align:right}
-  .kpi{background:#fafafa;border:1px solid #eee;border-radius:10px;padding:10px;margin:4px 0}
+  .right{}
+  .profit{display:block;text-align:right}
+  .stepper{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center}
+  .stepper input{width:100%}
+  .stepper button{min-width:56px}
+  .kpi{background:var(--hint);border:1px solid var(--line);border-radius:12px;padding:10px;margin:4px 0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;box-sizing:border-box}
   .actions{display:flex;gap:8px;flex-wrap:wrap}
-  .sticky{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);
-    padding:10px 12px calc(10px + env(safe-area-inset-bottom, 0px));display:flex;align-items:center;gap:10px;z-index:1000;min-height:var(--sticky-h)}
+  .sticky{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom, 0px));display:flex;align-items:center;gap:10px;z-index:1000;min-height:var(--sticky-h)}
   .sticky .spacer{flex:1}
-  table{width:100%;border-collapse:collapse}
-  th,td{border:1px solid var(--line);padding:8px;vertical-align:middle}
+  #lastSaved.good{color:#2ecc71} #lastSaved.warn{color:#f39c12} #lastSaved.bad{color:#e74c3c}
+  #presetWrap{display:flex;flex-wrap:wrap;gap:8px}
+  #presetWrap > .pill{flex:0 0 auto}
+
+  /* Settings layout */
+  .settings-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px;align-items:end}
+  .settings-grid > div label{display:block;margin:0 0 6px;color:var(--muted);font-weight:600}
+  @media (max-width:800px){.settings-grid{grid-template-columns:repeat(2,minmax(160px,1fr))}}
+  @media (max-width:520px){.settings-grid{grid-template-columns:1fr}}
+  .settings-bottom{display:grid;grid-template-columns:minmax(320px,1fr) minmax(220px,1fr);gap:12px;align-items:flex-start}
+  @media (max-width:800px){.settings-bottom{grid-template-columns:1fr}}
+  .kpi{flex:1 1 auto}
+  .kpi > div{white-space:nowrap}
+
+  /* Settings layout */
+  .settings-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px;align-items:end}
+  .settings-grid > div label{display:block;margin:0 0 6px;color:var(--muted);font-weight:600}
+  @media (max-width:800px){.settings-grid{grid-template-columns:repeat(2,minmax(160px,1fr))}}
+  @media (max-width:520px){.settings-grid{grid-template-columns:1fr}}
+
+  table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;box-sizing:border-box;border-radius:12px;overflow:hidden}
+  th,td{border:1px solid var(--line);padding:10px;vertical-align:middle;box-sizing:border-box}
   th{background:var(--hint);text-align:left}
-  td.right input{width:110px}
-  tr.active-row{background:#f7fbff}
+  tbody tr:nth-child(even){background:var(--row-alt)}
+  tbody tr:hover{background:color-mix(in srgb, var(--row-active) 55%, transparent)}
+  tr.active-row{background:var(--row-active)}
+  td.right input{width:100%;min-width:70px}
+
   @media (max-width:640px){
     table thead{display:none}
-    table, tbody, tr, td{display:block;width:100%}
-    tr{border:1px solid var(--line);border-radius:10px;margin:10px 0;padding:8px}
-    td{border:none;padding:6px 0}
-    td[data-label]:before{content:attr(data-label) ": ";font-weight:600;color:#444}
-    td.right{display:flex;justify-content:space-between;gap:10px}
-    td.right input{width:42%}
+    table, tbody, tr, td{display:block;width:100%;box-sizing:border-box}
+    tr{border:1px solid var(--line);border-radius:12px;margin:10px 0;padding:6px;background:var(--card);overflow:hidden}
+    td{border:none;padding:8px 10px;display:grid;grid-template-columns:92px 1fr;align-items:center;column-gap:10px}
+    td[data-label]::before{content:attr(data-label) ": ";font-weight:600;color:var(--muted);grid-column:1}
+    td > *{grid-column:2}
+    td.right{display:grid}
+    td.right input{width:100%}
+    .row-actions{justify-content:flex-start}
   }
-  .stepper{display:flex;gap:6px;align-items:center}
-  .stepper button{padding:6px 10px;border-radius:10px}
-  .row-actions{display:flex;gap:6px;flex-wrap:wrap}
-  .badge{display:inline-block;background:#f0f0f0;padding:2px 8px;border-radius:999px;margin-left:6px}
+    tr{border:1px solid var(--line);border-radius:12px;margin:10px 0;padding:6px;background:var(--card);overflow:hidden}
+    td{border:none;padding:8px 10px;display:grid;grid-template-columns:92px 1fr;align-items:center;column-gap:10px}
+    td[data-label]::before{content:attr(data-label) ": ";font-weight:600;color:var(--muted);grid-column:1}
+    td > *{grid-column:2}
+    td.right{display:grid}
+    td.right input{width:100%}
+    .row-actions{justify-content:flex-start}
+  }
+    table, tbody, tr, td{display:block;width:100%;box-sizing:border-box}
+    tr{border:1px solid var(--line);border-radius:12px;margin:10px 0;padding:8px;background:var(--card);overflow:hidden}
+    td{border:none;padding:8px 10px;display:grid;grid-template-columns:96px 1fr;align-items:center;column-gap:12px}
+    td[data-label]::before{content:attr(data-label) ": ";font-weight:600;color:var(--muted);grid-column:1}
+    td > *{grid-column:2}
+    td.right{display:grid}
+    td.right input{width:100%}
+  }
 </style>
 </head>
 <body>
-<h1>💸 Poker Split <span class="small badge">PWA</span></h1>
-<p class="small">PWA‑ready: Add to Home Screen + offline. Host via HTTPS, open in Safari en kies “Zet op beginscherm”.</p>
+<h1>💸 Poker Split <span class="small badge">Canvas live</span></h1>
+<p class="small">Vul je spelers, inzet en eindbedrag in. Klik onderin op <b>Berekenen & Tikkies</b>. Alles werkt hier live.</p>
 
+<!-- Presets -->
 <div class="card">
   <h3>Spelers</h3>
-  <div id="presetWrap" class="row"></div>
+  <div id="presetWrap"></div>
   <div class="row">
     <div>
       <label>Custom speler</label>
       <div class="actions">
-        <input id="customName" placeholder="Naam">
+        <input id="customName" placeholder="Naam" />
         <button id="addCustom">Toevoegen</button>
       </div>
     </div>
     <div>
       <label>Standaard inzet</label>
-      <input id="defaultBuyin" type="number" step="0.01" inputmode="decimal" value="10">
+      <input id="defaultBuyin" type="number" step="0.01" inputmode="decimal" value="10" />
     </div>
   </div>
   <div class="actions">
@@ -82,32 +144,35 @@
   </div>
 </div>
 
+<!-- Grid -->
 <div class="card">
   <h3>Invoer per speler</h3>
-  <table id="grid">
-    <thead>
-      <tr>
-        <th>Speler</th>
-        <th>Inzet</th>
-        <th>Eind</th>
-        <th>Winst/Verlies</th>
-        <th>Actie</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div class="table-wrap">
+    <table id="grid">
+      <thead>
+        <tr>
+          <th>Speler</th>
+          <th>Inzet</th>
+          <th>Eind</th>
+          <th>Winst/Verlies</th>
+          <th>Actie</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
   <div class="actions" style="margin-top:8px">
     <button id="fillBuyin">Zet alle inzet = standaard</button>
     <button id="equalizeEnd">Zet eind = inzet</button>
-    <button id="nudgeMinus">−5,00</button>
-    <button id="nudgePlus">+5,00</button>
+    <button id="nudgeMinus">−10,00</button>
+    <button id="nudgePlus">+10,00</button>
   </div>
 </div>
 
+<!-- Instellingen -->
 <div class="card">
-  <h3>Instellingen</h3>
-  <div class="row">
-    <div><label>Omschrijving</label><input id="desc" value="Pokeravond"></div>
+  <div class="row settings-grid">
+    <div><label>Omschrijving</label><input id="desc" value="Pokeravond" /></div>
     <div><label>Afronden</label>
       <select id="round">
         <option value="0.01">Cent (0,01)</option>
@@ -118,7 +183,7 @@
     </div>
     <div><label>Strategie</label>
       <select id="strategy">
-        <option value="largest">Grootste eerst</option>
+        <option value="largest">Grootste</option>
         <option value="typed">Invoer-volgorde</option>
         <option value="proportional">Proportioneel</option>
       </select>
@@ -131,10 +196,10 @@
       </select>
     </div>
   </div>
-  <div class="row">
+  <div class="row settings-bottom">
     <div class="kpi"><div>Som: <b id="kTotal">€ 0,00</b></div><div>Ontvangers: <b id="kPos">€ 0,00</b></div><div>Betalers: <b id="kNeg">€ 0,00</b></div></div>
     <div style="flex:1">
-      <label class="small"><input type="checkbox" id="autoBalance"> Som auto-balanceren</label>
+      <label class="small"><input type="checkbox" id="autoBalance" /> Som auto-balanceren</label>
       <div class="row" style="margin-top:6px">
         <div><label>Corrigeer speler</label><select id="balanceTarget"></select></div>
       </div>
@@ -142,11 +207,13 @@
   </div>
 </div>
 
+<!-- Resultaat -->
 <div class="card">
   <h3>Resultaat</h3>
   <div id="result"></div>
 </div>
 
+<!-- Sticky actiebar -->
 <div class="sticky">
   <div id="lastSaved" class="small">Autosave ✓</div>
   <div class="spacer"></div>
@@ -154,11 +221,21 @@
 </div>
 
 <script>
-const PRESETS = ['Jordy','Ronan','Tyson','Julian','Glenn','Max','Bram','Hanifi','Jordi','Vince'];
+// ===== Utils
+const PRESETS = ['Jordy','Ronan','Tyson','Julian','Glenn','Max','Bram','Hanifi','Jordi','Vince','Aron'];
 function euro(n){ return n.toLocaleString('nl-NL',{style:'currency',currency:'EUR'}); }
 function parseNum(v){ if(v===''||v==null)return NaN; let s=String(v).replace(',','.'); const n=Number(s); return Number.isFinite(n)?n:NaN; }
 function roundTo(x, step){ const inv=1/step; return Math.round(x*inv)/inv; }
 function tikkieLink(amount, desc){ const q=new URLSearchParams({amount:amount.toFixed(2),description:desc}); return `https://tikkie.me/pay?${q}`; }
+// Haptics (best-effort: Android Vibrate; iOS ondersteunt dit niet via web)
+function haptic(type='light'){
+  const V = navigator.vibrate ? navigator.vibrate.bind(navigator) : null;
+  if(!V) return; // silently ignore
+  if(type==='success') return V([12,20,12]);
+  if(type==='error') return V([1,40,1,40,1]);
+  if(type==='impact') return V(24);
+  return V(10);
+}
 
 const $grid = document.querySelector('#grid tbody');
 const $balanceTarget = document.getElementById('balanceTarget');
@@ -179,10 +256,10 @@ function rowHTML(name='', buyin='', end=''){
         <button data-step="end,-10">−10</button><button data-step="end,10">+10</button>
       </div>
     </td>
-    <td class="right" data-label="W/V"><span class="profit">€ 0,00</span></td>
+    <td class="right" data-label="W/V"><span class="profit mono">€ 0,00</span></td>
     <td data-label="Actie" class="row-actions">
-      <button data-action="zero">=</button>
-      <button data-action="del">Verwijder</button>
+      <button data-action="zero" title="Eind = Inzet">＝</button>
+      <button data-action="del" title="Verwijder">🗑️ Verwijder</button>
     </td>`;
 }
 
@@ -192,7 +269,9 @@ function addRow(name='', buyin='', end=''){
   $grid.appendChild(tr);
   recalcRow(tr);
   refreshBalanceTarget();
+  syncPills();
   saveStateDebounced();
+  haptic('success');
 }
 
 function setActiveRow(tr){
@@ -204,7 +283,7 @@ function setActiveRow(tr){
 function stepValue(inp, delta){
   const cur = parseNum(inp.value)||0;
   inp.value = (cur + delta).toFixed(2);
-  inp.dispatchEvent(new Event('input'));
+  inp.dispatchEvent(new Event('input', { bubbles: true }));
   inp.focus(); inp.select();
 }
 
@@ -234,6 +313,12 @@ function recalcTotals(){
   document.getElementById('kTotal').textContent = euro(total);
   document.getElementById('kPos').textContent = euro(pos);
   document.getElementById('kNeg').textContent = euro(neg);
+  // Live som in sticky bar
+  const $ls = document.getElementById('lastSaved');
+  $ls.classList.remove('good','warn','bad');
+  const drift = Math.abs(total);
+  if(drift < 0.005){ $ls.textContent='Som klopt ✓'; $ls.classList.add('good'); }
+  else { $ls.textContent = 'Som wijkt af ' + euro(drift); $ls.classList.add('warn'); }
   refreshBalanceTarget();
 }
 
@@ -247,7 +332,6 @@ function refreshBalanceTarget(){
   if(entries.length){ $balanceTarget.value = entries.find(e=>e.name===cur)?.name ?? entries[0].name; }
 }
 
-// Grid delegation
 $grid.addEventListener('click', (e)=>{
   const tr = e.target.closest('tr');
   if (!tr) return;
@@ -259,11 +343,13 @@ $grid.addEventListener('click', (e)=>{
     const delta = Number(deltaStr);
     const targetInput = tr.querySelector(which==='buy'?'.buyin':'.end');
     stepValue(targetInput, delta);
+    haptic('light');
   } else if (actAttr === 'zero'){
     const buy = tr.querySelector('.buyin'); const end = tr.querySelector('.end');
-    end.value = buy.value; end.dispatchEvent(new Event('input'));
+    end.value = buy.value; end.dispatchEvent(new Event('input', { bubbles: true }));
+    haptic('impact');
   } else if (actAttr === 'del'){
-    tr.remove(); recalcTotals(); saveState();
+    tr.remove(); recalcTotals(); syncPills(); saveState(); haptic('error');
   }
 });
 $grid.addEventListener('focusin', (e)=>{
@@ -277,60 +363,72 @@ $grid.addEventListener('input', (e)=>{
 });
 
 // Bulk controls
+const $defaultBuyin = document.getElementById('defaultBuyin');
 document.getElementById('fillBuyin').addEventListener('click', ()=>{
-  const val=document.getElementById('defaultBuyin').value;
-  $grid.querySelectorAll('.buyin').forEach(i=>{ i.value=val; i.dispatchEvent(new Event('input')); });
+  const val=$defaultBuyin.value;
+  $grid.querySelectorAll('.buyin').forEach(i=>{ i.value=val; i.dispatchEvent(new Event('input', { bubbles: true })); });
+  haptic('impact');
 });
 document.getElementById('equalizeEnd').addEventListener('click', ()=>{
   $grid.querySelectorAll('tr').forEach(tr=>{
     const buy=tr.querySelector('.buyin'); const end=tr.querySelector('.end');
-    end.value=buy.value; end.dispatchEvent(new Event('input'));
+    end.value=buy.value; end.dispatchEvent(new Event('input', { bubbles: true }));
   });
+  haptic('impact');
 });
-document.getElementById('nudgeMinus').addEventListener('click', ()=> nudgeActive(-5));
-document.getElementById('nudgePlus').addEventListener('click', ()=> nudgeActive(+5));
+document.getElementById('nudgeMinus').addEventListener('click', ()=>{ haptic('light'); nudgeActive(-10); });
+document.getElementById('nudgePlus').addEventListener('click', ()=>{ haptic('light'); nudgeActive(+10); });
 function nudgeActive(delta){
   const rows=Array.from($grid.children); if(!rows.length) return;
   const tr=rows[Math.max(0,Math.min(activeRowIndex,rows.length-1))];
-  const end=tr.querySelector('.end'); const cur=parseNum(end.value)||0; end.value=(cur+delta).toFixed(2); end.dispatchEvent(new Event('input')); end.focus(); end.select();
+  const end=tr.querySelector('.end'); const cur=parseNum(end.value)||0; end.value=(cur+delta).toFixed(2); end.dispatchEvent(new Event('input', { bubbles: true })); end.focus(); end.select();
 }
 
 // Presets UI
 const $presetWrap=document.getElementById('presetWrap');
+function normName(s){return (s||'').trim().toLowerCase();}
+function findRowsByName(name){ const n=normName(name); return Array.from($grid.children).filter(r=>normName(r.querySelector('.name').value)===n); }
+function rowExists(name){ return findRowsByName(name).length>0; }
+function removeRowsByName(name){ findRowsByName(name).forEach(r=>r.remove()); recalcTotals(); syncPills(); saveState(); }
 function renderPresets(){
   $presetWrap.innerHTML='';
   PRESETS.forEach(name=>{
-    const el=document.createElement('span'); el.className='pill'; el.textContent=name;
+    const el=document.createElement('span'); el.className='pill'; el.textContent=name; el.style.setProperty('--len', String(name.length));
+    if(rowExists(name)) el.classList.add('active');
     el.addEventListener('click',()=>{
-      el.classList.toggle('active');
-      if(el.classList.contains('active')){
-        addRow(name, document.getElementById('defaultBuyin').value, '');
-      } else {
-        const row = Array.from($grid.children).find(r=>r.querySelector('.name').value.trim().toLowerCase()===name.toLowerCase());
-        if(row){ row.remove(); recalcTotals(); saveState(); }
-      }
+      if(el.classList.contains('active')){ removeRowsByName(name); el.classList.remove('active'); }
+      else { if(!rowExists(name)) addRow(name, $defaultBuyin.value, ''); el.classList.add('active'); }
     });
     $presetWrap.appendChild(el);
   });
 }
-document.getElementById('selectAll').addEventListener('click', ()=>{
-  PRESETS.forEach(n=>{
-    const exists = Array.from($grid.children).some(r=>r.querySelector('.name').value.trim().toLowerCase()===n.toLowerCase());
-    if(!exists) addRow(n, document.getElementById('defaultBuyin').value, '');
+function syncPills(){
+  Array.from($presetWrap.children).forEach(p=>{
+    const name=p.textContent.trim().toLowerCase();
+    const exists = Array.from($grid.children)
+      .some(r => (r.querySelector('.name').value||'').trim().toLowerCase()===name);
+    p.classList.toggle('active', exists);
   });
-  Array.from($presetWrap.children).forEach(c=>c.classList.add('active'));
+}
+
+document.getElementById('selectAll').addEventListener('click', ()=>{
+  PRESETS.forEach(n=>{ if(!rowExists(n)) addRow(n, $defaultBuyin.value, ''); });
+  syncPills();
+  haptic('impact');
 });
 document.getElementById('clearAll').addEventListener('click', ()=>{
   $grid.innerHTML=''; Array.from($presetWrap.children).forEach(c=>c.classList.remove('active'));
-  recalcTotals(); saveState();
+  recalcTotals(); syncPills(); saveState(); haptic('error');
 });
 document.getElementById('addCustom').addEventListener('click', ()=>{
   const v=document.getElementById('customName').value.trim(); if(!v) return;
-  addRow(v, document.getElementById('defaultBuyin').value, ''); document.getElementById('customName').value='';
+  addRow(v, $defaultBuyin.value, ''); document.getElementById('customName').value='';
+  haptic('success');
 });
 
 // Paste-to-fill
-document.getElementById('pasteBtn').addEventListener('click', async ()=>{
+const $pasteBtn = document.getElementById('pasteBtn');
+$pasteBtn.addEventListener('click', async ()=>{
   try{
     const txt = await navigator.clipboard.readText();
     if(!txt) return alert('Klembord is leeg.');
@@ -350,7 +448,7 @@ function parsePaste(txt){
       addRow(name, isNaN(buy)?'':buy, isNaN(end)?'':end);
     } else if (parts.length===2){
       const [name, saldo] = [parts[0], parseEuro(parts[1])];
-      const buy = parseEuro(document.getElementById('defaultBuyin').value)||0;
+      const buy = parseEuro($defaultBuyin.value)||0;
       const end = buy + (isNaN(saldo)?0:saldo);
       addRow(name, buy, end);
     }
@@ -359,7 +457,8 @@ function parsePaste(txt){
 }
 
 // Calc with auto-balance
-document.getElementById('calc').addEventListener('click', ()=>{
+const $calc = document.getElementById('calc');
+$calc.addEventListener('click', ()=>{
   const desc=document.getElementById('desc').value||'Poker Split';
   const rounding=Number(document.getElementById('round').value);
   const strategy=document.getElementById('strategy').value;
@@ -379,6 +478,7 @@ document.getElementById('calc').addEventListener('click', ()=>{
   }
   const res=settle(entries, rounding, strategy);
   render(res.transfers, desc, perspective);
+  haptic('impact');
 });
 
 // Settlement
@@ -425,14 +525,12 @@ function render(transfers, desc, perspective){
   if(!transfers.length){ out.innerHTML='<p class="small">Geen transacties nodig.</p>'; return; }
   if(perspective==='raw'){
     const tbl=document.createElement('table');
-    tbl.innerHTML='<thead><tr><th>Van</th><th>Naar</th><th class="right">Bedrag</th><th>Tikkie</th></tr></thead><tbody></tbody>';
+    tbl.innerHTML='<thead><tr><th>Van</th><th>Naar</th><th class="right">Bedrag</th></tr></thead><tbody></tbody>';
     const tb=tbl.querySelector('tbody');
     transfers.forEach(t=>{
       const tr=document.createElement('tr');
       tr.innerHTML=`<td>${t.from}</td><td>${t.to}</td><td class="right">${euro(t.amount)}</td>`;
-      const td=document.createElement('td'); const a=document.createElement('a');
-      a.href=tikkieLink(t.amount,`${desc} (${t.to}→${t.from})`); a.textContent='Maak Tikkie'; a.target='_blank';
-      td.appendChild(a); tr.appendChild(td); tb.appendChild(tr);
+      tb.appendChild(tr);
     }); out.appendChild(tbl);
   } else {
     const group={};
@@ -441,27 +539,25 @@ function render(transfers, desc, perspective){
       const h=document.createElement('h4'); h.textContent = name + (perspective==='receiver'?' — stuur Tikkies naar:':' — jij betaalt aan:');
       out.appendChild(h);
       const tbl=document.createElement('table');
-      tbl.innerHTML='<thead><tr><th>Persoon</th><th class="right">Bedrag</th><th>Tikkie</th></tr></thead><tbody></tbody>';
+      tbl.innerHTML='<thead><tr><th>Persoon</th><th class="right">Bedrag</th></tr></thead><tbody></tbody>';
       const tb=tbl.querySelector('tbody');
       group[name].forEach(t=>{
         const other = perspective==='receiver'? t.from : t.to;
         const tr=document.createElement('tr');
         tr.innerHTML=`<td>${other}</td><td class="right">${euro(t.amount)}</td>`;
-        const td=document.createElement('td'); const a=document.createElement('a');
-        a.href=tikkieLink(t.amount,`${desc} (${perspective==='receiver'? name+'→'+other : other+'→'+name})`); a.textContent='Maak Tikkie'; a.target='_blank';
-        td.appendChild(a); tr.appendChild(td); tb.appendChild(tr);
+        tb.appendChild(tr);
       }); out.appendChild(tbl);
     });
   }
 }
 
 // Save/Restore
-const KEY='poker_split_v19_state';
+const KEY='poker_split_canvas_state_v4';
 function saveState(){
   const state={players:Array.from($grid.children).map(tr=>({name:tr.querySelector('.name').value, buyin:tr.querySelector('.buyin').value, end:tr.querySelector('.end').value})),
     desc:document.getElementById('desc').value, round:document.getElementById('round').value, strategy:document.getElementById('strategy').value, perspective:document.getElementById('perspective').value,
     defaultBuyin:document.getElementById('defaultBuyin').value};
-  localStorage.setItem(KEY, JSON.stringify(state));
+  try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
   document.getElementById('lastSaved').textContent='Autosave ✓';
 }
 let saveTimer=null;
@@ -469,9 +565,9 @@ function saveStateDebounced(){ clearTimeout(saveTimer); saveTimer=setTimeout(sav
 
 function restoreState(){
   renderPresets();
-  const raw=localStorage.getItem(KEY);
-  if(raw){
-    try{
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(raw){
       const s=JSON.parse(raw);
       (s.players||[]).forEach(p=>addRow(p.name,p.buyin,p.end));
       document.getElementById('desc').value=s.desc||'Pokeravond';
@@ -480,20 +576,12 @@ function restoreState(){
       document.getElementById('perspective').value=s.perspective||'receiver';
       document.getElementById('defaultBuyin').value=s.defaultBuyin||'10';
       recalcTotals();
-      return;
-    }catch(e){}
-  }
-  addRow('Julian', 10, '');
-  addRow('Tyson', 10, '');
+    }
+  }catch(e){}
+  if(!$grid.children.length){ addRow('Julian', 10, ''); addRow('Tyson', 10, ''); }
+  syncPills();
 }
 restoreState();
-
-// Register service worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js');
-  });
-}
 </script>
 </body>
 </html>

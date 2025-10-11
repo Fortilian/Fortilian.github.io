@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Poker Split — PWA</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Poker Split">
+<meta name="theme-color" content="#0A0A0A">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" media="(prefers-color-scheme: dark)" href="icons/favicon-32-dark.png">
+<link rel="icon" type="image/png" media="(prefers-color-scheme: light)" href="icons/favicon-32-light.png">
+<link rel="apple-touch-icon" media="(prefers-color-scheme: dark)" href="icons/icon-192-dark.png">
+<link rel="apple-touch-icon" media="(prefers-color-scheme: light)" href="icons/icon-192-light.png">
+<style>
+  :root{--fg:#111;--muted:#666;--line:#ddd;--bg:#fff;--hint:#f6f6f6;--accent:#2860ff;--sticky-h:64px}
+  html,body{background:var(--bg);color:var(--fg);font-family:-apple-system,system-ui,Segoe UI,Roboto;line-height:1.45}
+  body{max-width:1080px;margin:0 auto;padding:12px 12px calc(var(--sticky-h) + env(safe-area-inset-bottom, 0px));}
+  h1{font-size:1.3rem;margin:6px 0 8px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0}
+  .row>*{flex:1}
+  .card{border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;background:#fff}
+  .pill{display:inline-block;background:#eef;border:1px solid #cdd;padding:8px 10px;border-radius:999px;margin:4px 6px 0 0;font-size:.98rem;user-select:none}
+  .pill.active{background:#dfe8ff;border-color:#bcd}
+  input,select,button{font:inherit;padding:10px 12px;border-radius:12px;border:1px solid #ccc}
+  button{background:#fff;cursor:pointer}
+  button.primary{background:#2860ff;color:#fff;border-color:#2860ff}
+  .small{font-size:.92rem;color:var(--muted)}
+  .right{text-align:right}
+  .kpi{background:#fafafa;border:1px solid #eee;border-radius:10px;padding:10px;margin:4px 0}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .sticky{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom, 0px));display:flex;align-items:center;gap:10px;z-index:1000;min-height:var(--sticky-h)}
+  .sticky .spacer{flex:1}
+  table{width:100%;border-collapse:collapse}
+  th,td{border:1px solid var(--line);padding:8px;vertical-align:middle}
+  th{background:var(--hint);text-align:left}
+  td.right input{width:110px}
+  tr.active-row{background:#f7fbff}
+  @media (max-width:640px){
+    table thead{display:none}
+    table, tbody, tr, td{display:block;width:100%}
+    tr{border:1px solid var(--line);border-radius:10px;margin:10px 0;padding:8px}
+    td{border:none;padding:6px 0}
+    td[data-label]:before{content:attr(data-label) ": ";font-weight:600;color:#444}
+    td.right{display:flex;justify-content:space-between;gap:10px}
+    td.right input{width:42%}
+  }
+  .stepper{display:flex;gap:6px;align-items:center}
+  .stepper button{padding:6px 10px;border-radius:10px}
+  .row-actions{display:flex;gap:6px;flex-wrap:wrap}
+  .badge{display:inline-block;background:#f0f0f0;padding:2px 8px;border-radius:999px;margin-left:6px}
+</style>
+</head>
+<body>
+<h1>💸 Poker Split <span class="small badge">PWA</span></h1>
+<p class="small">PWA‑ready: Add to Home Screen + offline. Host via HTTPS, open in Safari en kies “Zet op beginscherm”.</p>
+
+<div class="card">
+  <h3>Spelers</h3>
+  <div id="presetWrap" class="row"></div>
+  <div class="row">
+    <div>
+      <label>Custom speler</label>
+      <div class="actions">
+        <input id="customName" placeholder="Naam">
+        <button id="addCustom">Toevoegen</button>
+      </div>
+    </div>
+    <div>
+      <label>Standaard inzet</label>
+      <input id="defaultBuyin" type="number" step="0.01" inputmode="decimal" value="10">
+    </div>
+  </div>
+  <div class="actions">
+    <button id="selectAll">Selecteer iedereen</button>
+    <button id="clearAll">Alles leeg</button>
+    <button id="pasteBtn">Plak lijst…</button>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Invoer per speler</h3>
+  <table id="grid">
+    <thead>
+      <tr>
+        <th>Speler</th>
+        <th>Inzet</th>
+        <th>Eind</th>
+        <th>Winst/Verlies</th>
+        <th>Actie</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <div class="actions" style="margin-top:8px">
+    <button id="fillBuyin">Zet alle inzet = standaard</button>
+    <button id="equalizeEnd">Zet eind = inzet</button>
+    <button id="nudgeMinus">−5,00</button>
+    <button id="nudgePlus">+5,00</button>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Instellingen</h3>
+  <div class="row">
+    <div><label>Omschrijving</label><input id="desc" value="Pokeravond"></div>
+    <div><label>Afronden</label>
+      <select id="round">
+        <option value="0.01">Cent (0,01)</option>
+        <option value="0.05">5 cent (0,05)</option>
+        <option value="0.10">10 cent (0,10)</option>
+        <option value="1">Euro (1,00)</option>
+      </select>
+    </div>
+    <div><label>Strategie</label>
+      <select id="strategy">
+        <option value="largest">Grootste eerst</option>
+        <option value="typed">Invoer-volgorde</option>
+        <option value="proportional">Proportioneel</option>
+      </select>
+    </div>
+    <div><label>Perspectief</label>
+      <select id="perspective">
+        <option value="receiver">Per ontvanger</option>
+        <option value="raw">Transacties</option>
+        <option value="payer">Per betaler</option>
+      </select>
+    </div>
+  </div>
+  <div class="row">
+    <div class="kpi"><div>Som: <b id="kTotal">€ 0,00</b></div><div>Ontvangers: <b id="kPos">€ 0,00</b></div><div>Betalers: <b id="kNeg">€ 0,00</b></div></div>
+    <div style="flex:1">
+      <label class="small"><input type="checkbox" id="autoBalance"> Som auto-balanceren</label>
+      <div class="row" style="margin-top:6px">
+        <div><label>Corrigeer speler</label><select id="balanceTarget"></select></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Resultaat</h3>
+  <div id="result"></div>
+</div>
+
+<div class="sticky">
+  <div id="lastSaved" class="small">Autosave ✓</div>
+  <div class="spacer"></div>
+  <button id="calc" class="primary">Berekenen & Tikkies</button>
+</div>
+
+<script>
+const PRESETS = ['Jordy','Ronan','Tyson','Julian','Glenn','Max','Bram','Hanifi','Jordi','Vince'];
+function euro(n){ return n.toLocaleString('nl-NL',{style:'currency',currency:'EUR'}); }
+function parseNum(v){ if(v===''||v==null)return NaN; let s=String(v).replace(',','.'); const n=Number(s); return Number.isFinite(n)?n:NaN; }
+function roundTo(x, step){ const inv=1/step; return Math.round(x*inv)/inv; }
+function tikkieLink(amount, desc){ const q=new URLSearchParams({amount:amount.toFixed(2),description:desc}); return `https://tikkie.me/pay?${q}`; }
+
+const $grid = document.querySelector('#grid tbody');
+const $balanceTarget = document.getElementById('balanceTarget');
+let activeRowIndex = 0;
+
+function rowHTML(name='', buyin='', end=''){
+  return `
+    <td data-label="Speler"><input class="name" placeholder="Naam" value="${name}"></td>
+    <td class="right" data-label="Inzet">
+      <div class="stepper">
+        <input class="buyin" type="number" inputmode="decimal" step="0.01" placeholder="0,00" value="${buyin}">
+        <button data-step="buy,-10">−10</button><button data-step="buy,10">+10</button>
+      </div>
+    </td>
+    <td class="right" data-label="Eind">
+      <div class="stepper">
+        <input class="end" type="number" inputmode="decimal" step="0.01" placeholder="0,00" value="${end}">
+        <button data-step="end,-10">−10</button><button data-step="end,10">+10</button>
+      </div>
+    </td>
+    <td class="right" data-label="W/V"><span class="profit">€ 0,00</span></td>
+    <td data-label="Actie" class="row-actions">
+      <button data-action="zero">=</button>
+      <button data-action="del">Verwijder</button>
+    </td>`;
+}
+
+function addRow(name='', buyin='', end=''){
+  const tr = document.createElement('tr');
+  tr.innerHTML = rowHTML(name,buyin,end);
+  $grid.appendChild(tr);
+  recalcRow(tr);
+  refreshBalanceTarget();
+  saveStateDebounced();
+}
+
+function setActiveRow(tr){
+  Array.from($grid.children).forEach(r=>r.classList.remove('active-row'));
+  tr.classList.add('active-row');
+  activeRowIndex = Array.from($grid.children).indexOf(tr);
+}
+
+function stepValue(inp, delta){
+  const cur = parseNum(inp.value)||0;
+  inp.value = (cur + delta).toFixed(2);
+  inp.dispatchEvent(new Event('input'));
+  inp.focus(); inp.select();
+}
+
+function recalcRow(tr){
+  const buy = parseNum(tr.querySelector('.buyin').value)||0;
+  const end = parseNum(tr.querySelector('.end').value)||0;
+  const prof = end - buy;
+  tr.dataset.profit = prof.toFixed(2);
+  tr.querySelector('.profit').textContent = euro(prof);
+  recalcTotals();
+  saveStateDebounced();
+}
+
+function getEntries(){
+  return Array.from($grid.children).map((tr,i)=>{
+    const name = tr.querySelector('.name').value.trim() || `Speler ${i+1}`;
+    const amt = parseNum(tr.dataset.profit||'0')||0;
+    return {name, amount: amt, order:i};
+  }).filter(e=>e.name);
+}
+
+function recalcTotals(){
+  const entries = getEntries();
+  const total = entries.reduce((a,e)=>a+e.amount,0);
+  const pos = entries.filter(e=>e.amount>0).reduce((a,e)=>a+e.amount,0);
+  const neg = entries.filter(e=>e.amount<0).reduce((a,e)=>a+e.amount,0);
+  document.getElementById('kTotal').textContent = euro(total);
+  document.getElementById('kPos').textContent = euro(pos);
+  document.getElementById('kNeg').textContent = euro(neg);
+  refreshBalanceTarget();
+}
+
+function refreshBalanceTarget(){
+  const entries = getEntries();
+  const cur = $balanceTarget.value;
+  $balanceTarget.innerHTML='';
+  entries.forEach(e=>{
+    const o=document.createElement('option'); o.value=e.name; o.textContent=e.name; $balanceTarget.appendChild(o);
+  });
+  if(entries.length){ $balanceTarget.value = entries.find(e=>e.name===cur)?.name ?? entries[0].name; }
+}
+
+// Grid delegation
+$grid.addEventListener('click', (e)=>{
+  const tr = e.target.closest('tr');
+  if (!tr) return;
+  setActiveRow(tr);
+  const stepAttr = e.target.getAttribute('data-step');
+  const actAttr = e.target.getAttribute('data-action');
+  if (stepAttr){
+    const [which, deltaStr] = stepAttr.split(',');
+    const delta = Number(deltaStr);
+    const targetInput = tr.querySelector(which==='buy'?'.buyin':'.end');
+    stepValue(targetInput, delta);
+  } else if (actAttr === 'zero'){
+    const buy = tr.querySelector('.buyin'); const end = tr.querySelector('.end');
+    end.value = buy.value; end.dispatchEvent(new Event('input'));
+  } else if (actAttr === 'del'){
+    tr.remove(); recalcTotals(); saveState();
+  }
+});
+$grid.addEventListener('focusin', (e)=>{
+  const tr = e.target.closest('tr'); if (tr) setActiveRow(tr);
+});
+$grid.addEventListener('input', (e)=>{
+  const tr = e.target.closest('tr');
+  if (tr && (e.target.classList.contains('buyin') || e.target.classList.contains('end') || e.target.classList.contains('name'))){
+    recalcRow(tr);
+  }
+});
+
+// Bulk controls
+document.getElementById('fillBuyin').addEventListener('click', ()=>{
+  const val=document.getElementById('defaultBuyin').value;
+  $grid.querySelectorAll('.buyin').forEach(i=>{ i.value=val; i.dispatchEvent(new Event('input')); });
+});
+document.getElementById('equalizeEnd').addEventListener('click', ()=>{
+  $grid.querySelectorAll('tr').forEach(tr=>{
+    const buy=tr.querySelector('.buyin'); const end=tr.querySelector('.end');
+    end.value=buy.value; end.dispatchEvent(new Event('input'));
+  });
+});
+document.getElementById('nudgeMinus').addEventListener('click', ()=> nudgeActive(-5));
+document.getElementById('nudgePlus').addEventListener('click', ()=> nudgeActive(+5));
+function nudgeActive(delta){
+  const rows=Array.from($grid.children); if(!rows.length) return;
+  const tr=rows[Math.max(0,Math.min(activeRowIndex,rows.length-1))];
+  const end=tr.querySelector('.end'); const cur=parseNum(end.value)||0; end.value=(cur+delta).toFixed(2); end.dispatchEvent(new Event('input')); end.focus(); end.select();
+}
+
+// Presets UI
+const $presetWrap=document.getElementById('presetWrap');
+function renderPresets(){
+  $presetWrap.innerHTML='';
+  PRESETS.forEach(name=>{
+    const el=document.createElement('span'); el.className='pill'; el.textContent=name;
+    el.addEventListener('click',()=>{
+      el.classList.toggle('active');
+      if(el.classList.contains('active')){
+        addRow(name, document.getElementById('defaultBuyin').value, '');
+      } else {
+        const row = Array.from($grid.children).find(r=>r.querySelector('.name').value.trim().toLowerCase()===name.toLowerCase());
+        if(row){ row.remove(); recalcTotals(); saveState(); }
+      }
+    });
+    $presetWrap.appendChild(el);
+  });
+}
+document.getElementById('selectAll').addEventListener('click', ()=>{
+  PRESETS.forEach(n=>{
+    const exists = Array.from($grid.children).some(r=>r.querySelector('.name').value.trim().toLowerCase()===n.toLowerCase());
+    if(!exists) addRow(n, document.getElementById('defaultBuyin').value, '');
+  });
+  Array.from($presetWrap.children).forEach(c=>c.classList.add('active'));
+});
+document.getElementById('clearAll').addEventListener('click', ()=>{
+  $grid.innerHTML=''; Array.from($presetWrap.children).forEach(c=>c.classList.remove('active'));
+  recalcTotals(); saveState();
+});
+document.getElementById('addCustom').addEventListener('click', ()=>{
+  const v=document.getElementById('customName').value.trim(); if(!v) return;
+  addRow(v, document.getElementById('defaultBuyin').value, ''); document.getElementById('customName').value='';
+});
+
+// Paste-to-fill
+document.getElementById('pasteBtn').addEventListener('click', async ()=>{
+  try{
+    const txt = await navigator.clipboard.readText();
+    if(!txt) return alert('Klembord is leeg.');
+    parsePaste(txt);
+  }catch(e){
+    const txt = prompt('Plak hier je lijst (Naam, inzet, eind) of (Naam, saldo):');
+    if(txt) parsePaste(txt);
+  }
+});
+function parseEuro(s){ return parseNum(String(s).replace(/[€\s]/g,'').replace(',','.')); }
+function parsePaste(txt){
+  const lines = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  for(const raw of lines){
+    const parts = raw.split(/[;,|\t]/).map(s=>s.trim());
+    if(parts.length>=3){
+      const [name,buy,end] = [parts[0], parseEuro(parts[1]), parseEuro(parts[2])];
+      addRow(name, isNaN(buy)?'':buy, isNaN(end)?'':end);
+    } else if (parts.length===2){
+      const [name, saldo] = [parts[0], parseEuro(parts[1])];
+      const buy = parseEuro(document.getElementById('defaultBuyin').value)||0;
+      const end = buy + (isNaN(saldo)?0:saldo);
+      addRow(name, buy, end);
+    }
+  }
+  saveStateDebounced();
+}
+
+// Calc with auto-balance
+document.getElementById('calc').addEventListener('click', ()=>{
+  const desc=document.getElementById('desc').value||'Poker Split';
+  const rounding=Number(document.getElementById('round').value);
+  const strategy=document.getElementById('strategy').value;
+  const perspective=document.getElementById('perspective').value;
+  const auto=document.getElementById('autoBalance').checked;
+  const target=document.getElementById('balanceTarget').value;
+
+  let entries=getEntries();
+  if(auto && entries.length){
+    const sum=roundTo(entries.reduce((a,e)=>a+e.amount,0),0.01);
+    if(Math.abs(sum)>0.0001){
+      const idx = entries.findIndex(e=>e.name===target);
+      const id = idx>=0?idx:0;
+      entries[id] = {...entries[id], amount: roundTo(entries[id].amount - sum, 0.01)};
+      document.getElementById('lastSaved').textContent = `Auto-balance op ${entries[id].name}: ${euro(-sum)}`;
+    }
+  }
+  const res=settle(entries, rounding, strategy);
+  render(res.transfers, desc, perspective);
+});
+
+// Settlement
+function settle(entries, rounding, strategy){
+  let creditors=[], debtors=[], sum=0;
+  for(const e of entries){
+    const a = roundTo(e.amount, rounding); sum += a;
+    if (a>1e-9) creditors.push({name:e.name, amount:a, order:e.order});
+    else if (a<-1e-9) debtors.push({name:e.name, amount:-a, order:e.order});
+  }
+  if (strategy==='largest'){ creditors.sort((a,b)=>b.amount-a.amount); debtors.sort((a,b)=>b.amount-a.amount); }
+  else { creditors.sort((a,b)=>a.order-b.order); debtors.sort((a,b)=>a.order-b.order); }
+
+  const transfers=[];
+  if (strategy==='proportional'){
+    const totalDebt0 = debtors.reduce((a,d)=>a+d.amount,0);
+    for(const c of creditors){
+      let remaining=c.amount;
+      for(const d of debtors){
+        if(d.amount<=1e-9||remaining<=1e-9) continue;
+        const share=roundTo(c.amount*(d.amount/totalDebt0),rounding);
+        const amount=Math.min(share,d.amount,remaining);
+        const amtR=roundTo(amount,rounding);
+        if(amtR>0){ transfers.push({from:d.name,to:c.name,amount:amtR}); d.amount=roundTo(d.amount-amtR,rounding); remaining=roundTo(remaining-amtR,rounding); }
+      }
+    }
+  } else {
+    let i=0,j=0;
+    while(i<debtors.length && j<creditors.length){
+      const d=debtors[i], c=creditors[j];
+      const amount=Math.min(d.amount,c.amount);
+      const amtR=roundTo(amount,rounding);
+      if(amtR>0){ transfers.push({from:d.name,to:c.name,amount:amtR}); d.amount=roundTo(d.amount-amtR,rounding); c.amount=roundTo(c.amount-amtR,rounding); }
+      if(d.amount<=1e-9) i++;
+      if(c.amount<=1e-9) j++;
+    }
+  }
+  const residual=roundTo(sum,rounding);
+  return {transfers,residual};
+}
+function render(transfers, desc, perspective){
+  const out=document.getElementById('result');
+  out.innerHTML='';
+  if(!transfers.length){ out.innerHTML='<p class="small">Geen transacties nodig.</p>'; return; }
+  if(perspective==='raw'){
+    const tbl=document.createElement('table');
+    tbl.innerHTML='<thead><tr><th>Van</th><th>Naar</th><th class="right">Bedrag</th><th>Tikkie</th></tr></thead><tbody></tbody>';
+    const tb=tbl.querySelector('tbody');
+    transfers.forEach(t=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${t.from}</td><td>${t.to}</td><td class="right">${euro(t.amount)}</td>`;
+      const td=document.createElement('td'); const a=document.createElement('a');
+      a.href=tikkieLink(t.amount,`${desc} (${t.to}→${t.from})`); a.textContent='Maak Tikkie'; a.target='_blank';
+      td.appendChild(a); tr.appendChild(td); tb.appendChild(tr);
+    }); out.appendChild(tbl);
+  } else {
+    const group={};
+    transfers.forEach(t=>{ const key = perspective==='receiver'? t.to : t.from; (group[key]??=[]).push(t); });
+    Object.keys(group).sort().forEach(name=>{
+      const h=document.createElement('h4'); h.textContent = name + (perspective==='receiver'?' — stuur Tikkies naar:':' — jij betaalt aan:');
+      out.appendChild(h);
+      const tbl=document.createElement('table');
+      tbl.innerHTML='<thead><tr><th>Persoon</th><th class="right">Bedrag</th><th>Tikkie</th></tr></thead><tbody></tbody>';
+      const tb=tbl.querySelector('tbody');
+      group[name].forEach(t=>{
+        const other = perspective==='receiver'? t.from : t.to;
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${other}</td><td class="right">${euro(t.amount)}</td>`;
+        const td=document.createElement('td'); const a=document.createElement('a');
+        a.href=tikkieLink(t.amount,`${desc} (${perspective==='receiver'? name+'→'+other : other+'→'+name})`); a.textContent='Maak Tikkie'; a.target='_blank';
+        td.appendChild(a); tr.appendChild(td); tb.appendChild(tr);
+      }); out.appendChild(tbl);
+    });
+  }
+}
+
+// Save/Restore
+const KEY='poker_split_v19_state';
+function saveState(){
+  const state={players:Array.from($grid.children).map(tr=>({name:tr.querySelector('.name').value, buyin:tr.querySelector('.buyin').value, end:tr.querySelector('.end').value})),
+    desc:document.getElementById('desc').value, round:document.getElementById('round').value, strategy:document.getElementById('strategy').value, perspective:document.getElementById('perspective').value,
+    defaultBuyin:document.getElementById('defaultBuyin').value};
+  localStorage.setItem(KEY, JSON.stringify(state));
+  document.getElementById('lastSaved').textContent='Autosave ✓';
+}
+let saveTimer=null;
+function saveStateDebounced(){ clearTimeout(saveTimer); saveTimer=setTimeout(saveState, 250); }
+
+function restoreState(){
+  renderPresets();
+  const raw=localStorage.getItem(KEY);
+  if(raw){
+    try{
+      const s=JSON.parse(raw);
+      (s.players||[]).forEach(p=>addRow(p.name,p.buyin,p.end));
+      document.getElementById('desc').value=s.desc||'Pokeravond';
+      document.getElementById('round').value=s.round||'0.01';
+      document.getElementById('strategy').value=s.strategy||'largest';
+      document.getElementById('perspective').value=s.perspective||'receiver';
+      document.getElementById('defaultBuyin').value=s.defaultBuyin||'10';
+      recalcTotals();
+      return;
+    }catch(e){}
+  }
+  addRow('Julian', 10, '');
+  addRow('Tyson', 10, '');
+}
+restoreState();
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js');
+  });
+}
+</script>
+</body>
+</html>

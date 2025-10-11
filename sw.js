@@ -1,27 +1,93 @@
-// Offline cache for Poker Split
-const CACHE = 'poker-split-v2';
-const ASSETS = ['./','./index.html','./manifest.webmanifest'];
+// Poker Split — Service Worker
+// Bump deze VERSION bij elke release
+const VERSION = 'v4-2025-10-12';
+const STATIC_CACHE  = `ps-static-${VERSION}`;
+const RUNTIME_CACHE = `ps-runtime-${VERSION}`;
+
+// Assets die zelden wijzigen (geen HTML!)
+const STATIC_ASSETS = [
+  '/manifest.webmanifest',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/apple-touch-icon.png',
+  // voeg hier je css/js/logo’s toe, maar GEEN index.html
+];
+
+// Install: alleen statische assets cachen
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(STATIC_CACHE).then(cache => cache.addAll(STATIC_ASSETS))
+  );
+  self.skipWaiting(); // direct klaarzetten
 });
+
+// Activate: oude caches opruimen
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    caches.keys().then(keys =>
+      Promise.all(keys
+        .filter(k => ![STATIC_CACHE, RUNTIME_CACHE].includes(k))
+        .map(k => caches.delete(k))
+      )
+    )
   );
   self.clients.claim();
 });
+
+// Fetch: 
+// - Navigaties/HTML => network-first (offline fallback uit cache)
+// - Overig GET => cache-first met runtime-cache
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  event.respondWith(
-    caches.match(req).then(cached => cached || fetch(req).then(res => {
+  const url = new URL(req.url);
+
+  // Alleen behandelen binnen eigen origin
+  if (url.origin !== location.origin) return;
+
+  // Navigaties (HTML)
+  if (req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html')) {
+    event.respondWith((async () => {
       try {
-        const copy = res.clone();
-        if (req.method === 'GET' && new URL(req.url).origin === location.origin) {
-          caches.open(CACHE).then(cache => cache.put(req, copy));
+        const fresh = await fetch(req, { cache: 'no-store' });
+        // Bewaar/refresh een offline fallback
+        const copy = fresh.clone();
+        const cache = await caches.open(RUNTIME_CACHE);
+        cache.put('/', copy.clone()).catch(()=>{});
+        cache.put('/index.html', copy.clone()).catch(()=>{});
+        return fresh;
+      } catch (err) {
+        // Offline fallback
+        const cache = await caches.open(RUNTIME_CACHE);
+        return (await cache.match('/')) ||
+               (await cache.match('/index.html')) ||
+               new Response('Offline', { status: 503, statusText: 'Offline' });
+      }
+    })());
+    return;
+  }
+
+  // Andere GET-requests: cache-first, vervolgens naar netwerk en runtime-cache
+  if (req.method === 'GET') {
+    event.respondWith((async () => {
+      const cached = await caches.match(req);
+      if (cached) return cached;
+      try {
+        const res = await fetch(req);
+        // Alleen eenvoudige responses cachen
+        if (res && res.ok) {
+          const copy = res.clone();
+          const cache = await caches.open(RUNTIME_CACHE);
+          cache.put(req, copy).catch(()=>{});
         }
-      } catch (e) {}
-      return res;
-    }).catch(() => cached))
-  );
+        return res;
+      } catch (e) {
+        return cached || new Response('', { status: 504, statusText: 'Gateway Timeout' });
+      }
+    })());
+  }
+});
+
+// Optioneel: vanuit je app postMessage({type:'SKIP_WAITING'}) sturen
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });

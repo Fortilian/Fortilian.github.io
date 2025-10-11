@@ -1,6 +1,7 @@
 {
   "name": "Poker Split",
   "short_name": "Poker Split",
+  "version": "1.0.3",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#FFFFFF",

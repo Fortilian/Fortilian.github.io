@@ -3,20 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Poker & Tikkie Verrekening — v1.8 (PWA)</title>
-
-<!-- iOS/PWA meta -->
+<title>Poker Split — PWA</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Poker Tikkies">
-<meta name="theme-color" content="#2860ff">
-
+<meta name="apple-mobile-web-app-title" content="Poker Split">
+<meta name="theme-color" content="#0A0A0A">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
-<link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
-<link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png">
-
+<link rel="icon" type="image/png" media="(prefers-color-scheme: dark)" href="icons/favicon-32-dark.png">
+<link rel="icon" type="image/png" media="(prefers-color-scheme: light)" href="icons/favicon-32-light.png">
+<link rel="apple-touch-icon" media="(prefers-color-scheme: dark)" href="icons/icon-192-dark.png">
+<link rel="apple-touch-icon" media="(prefers-color-scheme: light)" href="icons/icon-192-light.png">
 <style>
   :root{--fg:#111;--muted:#666;--line:#ddd;--bg:#fff;--hint:#f6f6f6;--accent:#2860ff;--sticky-h:64px}
   html,body{background:var(--bg);color:var(--fg);font-family:-apple-system,system-ui,Segoe UI,Roboto;line-height:1.45}
@@ -29,7 +25,7 @@
   .pill.active{background:#dfe8ff;border-color:#bcd}
   input,select,button{font:inherit;padding:10px 12px;border-radius:12px;border:1px solid #ccc}
   button{background:#fff;cursor:pointer}
-  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.primary{background:#2860ff;color:#fff;border-color:#2860ff}
   .small{font-size:.92rem;color:var(--muted)}
   .right{text-align:right}
   .kpi{background:#fafafa;border:1px solid #eee;border-radius:10px;padding:10px;margin:4px 0}
@@ -58,8 +54,8 @@
 </style>
 </head>
 <body>
-<h1>💸 Poker & Tikkie Verrekening <span class="small badge">v1.8 — PWA</span></h1>
-<p class="small">PWA‑ready: Add to Home Screen + offline. Host via HTTPS (GitHub Pages/Netlify), open in Safari en kies “Zet op beginscherm”.</p>
+<h1>💸 Poker Split <span class="small badge">PWA</span></h1>
+<p class="small">PWA‑ready: Add to Home Screen + offline. Host via HTTPS, open in Safari en kies “Zet op beginscherm”.</p>
 
 <div class="card">
   <h3>Spelers</h3>
@@ -156,7 +152,6 @@
 </div>
 
 <script>
-// ===== Utils
 const PRESETS = ['Jordy','Ronan','Tyson','Julian','Glenn','Max','Bram','Hanifi','Jordi','Vince'];
 function euro(n){ return n.toLocaleString('nl-NL',{style:'currency',currency:'EUR'}); }
 function parseNum(v){ if(v===''||v==null)return NaN; let s=String(v).replace(',','.'); const n=Number(s); return Number.isFinite(n)?n:NaN; }
@@ -250,7 +245,7 @@ function refreshBalanceTarget(){
   if(entries.length){ $balanceTarget.value = entries.find(e=>e.name===cur)?.name ?? entries[0].name; }
 }
 
-// Event delegation for the grid
+// Grid delegation
 $grid.addEventListener('click', (e)=>{
   const tr = e.target.closest('tr');
   if (!tr) return;
@@ -363,7 +358,7 @@ function parsePaste(txt){
 
 // Calc with auto-balance
 document.getElementById('calc').addEventListener('click', ()=>{
-  const desc=document.getElementById('desc').value||'Pokeravond';
+  const desc=document.getElementById('desc').value||'Poker Split';
   const rounding=Number(document.getElementById('round').value);
   const strategy=document.getElementById('strategy').value;
   const perspective=document.getElementById('perspective').value;
@@ -459,13 +454,11 @@ function render(transfers, desc, perspective){
 }
 
 // Save/Restore
-const KEY='poker_v18_state';
+const KEY='poker_split_v19_state';
 function saveState(){
-  const state={
-    players:Array.from($grid.children).map(tr=>({name:tr.querySelector('.name').value, buyin:tr.querySelector('.buyin').value, end:tr.querySelector('.end').value})),
+  const state={players:Array.from($grid.children).map(tr=>({name:tr.querySelector('.name').value, buyin:tr.querySelector('.buyin').value, end:tr.querySelector('.end').value})),
     desc:document.getElementById('desc').value, round:document.getElementById('round').value, strategy:document.getElementById('strategy').value, perspective:document.getElementById('perspective').value,
-    defaultBuyin:document.getElementById('defaultBuyin').value
-  };
+    defaultBuyin:document.getElementById('defaultBuyin').value};
   localStorage.setItem(KEY, JSON.stringify(state));
   document.getElementById('lastSaved').textContent='Autosave ✓';
 }

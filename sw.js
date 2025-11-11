@@ -1,6 +1,6 @@
 // Poker Split — Service Worker
 // Bump deze VERSION bij elke release
-const VERSION = 'v6-2025-10-31';
+const VERSION = 'v7-2025-10-31';
 const STATIC_CACHE  = `ps-static-${VERSION}`;
 const RUNTIME_CACHE = `ps-runtime-${VERSION}`;
 

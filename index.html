@@ -73,8 +73,11 @@
   .btn{border:1px solid var(--input-border);background:var(--input-bg)}
   .btn.primary{background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 95%, #fff 0%) 0%, var(--accent) 100%);color:#fff;border-color:var(--accent);box-shadow:0 6px 16px rgba(40,96,255,.20)}
   .btn.link{background:var(--pill-bg);border-color:var(--pill-border);font-weight:600}
+  .btn.small-btn{padding:6px 10px;font-size:.9rem;border-radius:999px}
 
-  .profit{display:inline-block;text-align:right;min-width:80px}
+  .profit{display:inline-block;text-align:right;min-width:80px;transition:color .15s ease-out}
+  .profit-win{color:#2ecc71;}
+  .profit-loss{color:#ff6b6b;}
 
   /* compacte stepper: input + -10 + +10 in één rij */
   .stepper{
@@ -88,7 +91,6 @@
   }
   .stepper button{
     min-width:46px;
-    padding:6px 10px;
   }
 
   /* resultaat-rij (W/V + AB + delete) */
@@ -98,18 +100,39 @@
     gap:10px;
     justify-content:flex-start;
     flex-wrap:nowrap;
+    padding:4px 10;           /* geen links/rechts padding – dat doet de <td> al */
+    border-radius:999px;
+    background:transparent;
+    transition:background .15s ease-out;
+  }
+
+  .result-wrap.result-win{
+    background:rgba(46,204,113,0.10);
+  }
+  .result-wrap.result-loss{
+    background:rgba(231,76,60,0.10);
   }
   .result-left{
     display:flex;
     align-items:center;
-    gap:8px;
+    gap:6px;
   }
   .ab-label{
     display:inline-flex;
     align-items:center;
-    gap:4px;
-    font-size:.9rem;
+    gap:0px;             /* minder ruimte tussen checkbox en "AB?" */
+    font-size:.85rem;
     color:var(--muted);
+    white-space:nowrap;
+  }
+
+    /* Checkbox zelf: marge weg + kleiner formaat */
+  .ab-label input[type="checkbox"]{
+    margin:0;
+    width:16px;
+    height:16px;
+    padding:0;
+    box-sizing:border-box;
   }
 
   .kpi{background:var(--hint);border:1px solid var(--line);border-radius:12px;padding:10px;margin:4px 0;display:flex;gap:12px;flex-wrap:wrap}
@@ -122,9 +145,10 @@
   #presetWrap{display:flex;flex-wrap:wrap;gap:8px}
   #presetWrap > .pill{flex:0 0 auto}
 
+  /* prullenbak-knop, slot even breed als +10 */
   .icon-btn{
-    padding:6px 8px;
-    min-width:34px;
+    padding:0;
+    min-width:46px;
     height:34px;
     display:inline-flex;
     align-items:center;
@@ -135,29 +159,14 @@
   /* Settings layout */
   .settings-grid{
     display:grid;
-    grid-template-columns:repeat(4,minmax(160px,1fr));
+    grid-template-columns:repeat(2,minmax(160px,1fr));
     gap:12px;
-    align-items:end;
+    align-items:end
   }
-  .settings-grid > div label{
-    display:block;
-    margin:0 0 6px;
-    color:var(--muted);
-    font-weight:600;
+  .settings-grid > div label{display:block;margin:0 0 6px;color:var(--muted);font-weight:600}
+  @media (min-width:800px){
+    .settings-grid{grid-template-columns:repeat(4,minmax(160px,1fr))}
   }
-
-  /* mobiel / tablet: 2 bij 2 (Omschrijving+Afronden, Strategie+Perspectief) */
-  @media (max-width:800px){
-    .settings-grid{
-      grid-template-columns:repeat(2,minmax(0,1fr));
-      column-gap:10px;
-      row-gap:8px;
-    }
-    .settings-grid > div{
-      grid-column:auto;
-    }
-  }
-
   .settings-bottom{display:grid;grid-template-columns:minmax(320px,1fr) minmax(220px,1fr);gap:12px;align-items:flex-start}
   @media (max-width:800px){.settings-bottom{grid-template-columns:1fr}}
 
@@ -201,12 +210,20 @@
       font-size:.95rem;
     }
   }
+
+  .card-header-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    margin-bottom:4px;
+  }
 </style>
 </head>
 <body>
 
 <header id="topBar" class="topbar">
-  <h1>💸 Poker Split <span class="small badge">Canvas live</span></h1>
+  <h1>💸 Poker Split</h1>
   <button id="openStats" class="btn link">📊 Statistieken</button>
 </header>
 
@@ -255,8 +272,7 @@
   <div class="actions" style="margin-top:8px">
     <button id="fillBuyin" class="btn">Zet alle inzet = standaard</button>
     <button id="equalizeEnd" class="btn">Zet eind = inzet</button>
-    <button id="nudgeMinus" class="btn">−10,00</button>
-    <button id="nudgePlus" class="btn">+10,00</button>
+    <!-- globale -10 / +10 knoppen verwijderd -->
   </div>
 </div>
 
@@ -304,7 +320,10 @@
 
 <!-- Resultaat -->
 <div class="card">
-  <h3>Resultaat</h3>
+  <div class="card-header-row">
+    <h3>Resultaat</h3>
+    <button id="shareResult" class="btn small-btn" disabled>📤 Delen</button>
+  </div>
   <div id="result"></div>
 </div>
 
@@ -328,6 +347,7 @@ function djb2(str){ let h=5381; for(let i=0;i<str.length;i++){ h=((h<<5)+h)+str.
 // ===== UI helpers
 const $grid = document.querySelector('#grid tbody');
 let activeRowIndex = 0;
+let lastShareText = '';
 
 function rowHTML(name='', buyin='', end=''){
   return `
@@ -385,7 +405,15 @@ function recalcRow(tr){
   const end = parseNum(tr.querySelector('.end').value)||0;
   const prof = end - buy;
   tr.dataset.profit = prof.toFixed(2);
-  tr.querySelector('.profit').textContent = euro(prof);
+
+  const profitEl = tr.querySelector('.profit');
+  const wrapEl = tr.querySelector('.result-wrap');
+  profitEl.textContent = euro(prof);
+  profitEl.classList.toggle('profit-win', prof > 0.005);
+  profitEl.classList.toggle('profit-loss', prof < -0.005);
+  wrapEl.classList.toggle('result-win', prof > 0.005);
+  wrapEl.classList.toggle('result-loss', prof < -0.005);
+
   recalcTotals();
   saveStateDebounced();
 }
@@ -446,12 +474,15 @@ document.getElementById('equalizeEnd').addEventListener('click', ()=>{
   });
   haptic('impact');
 });
-document.getElementById('nudgeMinus').addEventListener('click', ()=>{ haptic('light'); nudgeActive(-10); });
-document.getElementById('nudgePlus').addEventListener('click', ()=>{ haptic('light'); nudgeActive(+10); });
+
+// globale -10/+10 bestaan niet meer; alleen nudgeActive helper laten staan als we later iets willen
 function nudgeActive(delta){
   const rows=Array.from($grid.children); if(!rows.length) return;
   const tr=rows[Math.max(0,Math.min(activeRowIndex,rows.length-1))];
-  const end=tr.querySelector('.end'); const cur=parseNum(end.value)||0; end.value=(cur+delta).toFixed(2); end.dispatchEvent(new Event('input', { bubbles: true })); end.focus(); end.select();
+  const end=tr.querySelector('.end'); const cur=parseNum(end.value)||0;
+  end.value=(cur+delta).toFixed(2);
+  end.dispatchEvent(new Event('input', { bubbles: true }));
+  end.focus(); end.select();
 }
 
 // Presets
@@ -574,7 +605,10 @@ function settle(entries, rounding, strategy){
 function render(transfers, desc, perspective){
   const out=document.getElementById('result');
   out.innerHTML='';
-  if(!transfers.length){ out.innerHTML='<p class="small">Geen transacties nodig.</p>'; return; }
+  if(!transfers.length){
+    out.innerHTML='<p class="small">Geen transacties nodig 🎉</p>';
+    return;
+  }
   if(perspective==='raw'){
     const tbl=document.createElement('table');
     tbl.innerHTML='<thead><tr><th>Van</th><th>Naar</th><th class="right">Bedrag</th></tr></thead><tbody></tbody>';
@@ -603,6 +637,33 @@ function render(transfers, desc, perspective){
   }
 }
 
+function formatShareText(entries, transfers, desc){
+  const now = new Date();
+  const dateStr = now.toLocaleString('nl-NL',{dateStyle:'short', timeStyle:'short'});
+  const lines = [];
+  lines.push(`💸 ${desc}`);
+  lines.push(`📅 ${dateStr}`);
+  lines.push('');
+  lines.push('Resultaat per speler:');
+  entries.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(e=>{
+    const sign = e.amount>0 ? '+' : '';
+    lines.push(`• ${e.name}: ${sign}${euro(e.amount)}`);
+  });
+  lines.push('');
+  if(transfers.length){
+    lines.push('Tikkies:');
+    transfers.forEach(t=>{
+      lines.push(`• ${t.from} → ${t.to}: ${euro(t.amount)}`);
+    });
+  } else {
+    lines.push('Niemand hoeft wat te betalen 🎉');
+  }
+  lines.push('');
+  lines.push('Verzonden met Poker Split');
+  return lines.join('\n');
+}
+
+
 document.getElementById('calc').addEventListener('click', ()=>{
   const desc=document.getElementById('desc').value||'Poker Split';
   const rounding=Number(document.getElementById('round').value);
@@ -624,7 +685,31 @@ document.getElementById('calc').addEventListener('click', ()=>{
   }
   const res=settle(entries, rounding, strategy);
   render(res.transfers, desc, perspective);
+
+  // share-tekst voorbereiden
+  lastShareText = formatShareText(entries, res.transfers, desc);
+  const shareBtn = document.getElementById('shareResult');
+  shareBtn.disabled = !lastShareText;
   haptic('impact');
+});
+
+// Deel-knop
+document.getElementById('shareResult').addEventListener('click', async ()=>{
+  if(!lastShareText){
+    alert('Bereken eerst de resultaten.');
+    return;
+  }
+  const text = lastShareText;
+  if(navigator.share){
+    try{
+      await navigator.share({ text });
+    }catch(e){
+      // user cancel, geen probleem
+    }
+  }else{
+    const waUrl = 'https://wa.me/?text=' + encodeURIComponent(text);
+    window.open(waUrl, '_blank');
+  }
 });
 
 // ===== IndexedDB (sessions)
@@ -732,7 +817,8 @@ function restoreState(){
       (s.players||[]).forEach(p=>{
         addRow(p.name,p.buyin,p.end);
         const tr = $grid.lastElementChild;
-        const ab = tr.querySelector('.ab'); if (ab && typeof p.ab!=='undefined') ab.checked = !!p.ab;
+        const ab = tr.querySelector('.ab');
+        if (ab && typeof p.ab!=='undefined') ab.checked = !!p.ab;
         recalcRow(tr);
       });
       document.getElementById('desc').value=s.desc||'Pokeravond';
@@ -740,11 +826,7 @@ function restoreState(){
       document.getElementById('strategy').value=s.strategy||'largest';
       document.getElementById('perspective').value=s.perspective||'receiver';
       document.getElementById('defaultBuyin').value=s.defaultBuyin||'10';
-      if(typeof s.autoBalance === 'boolean'){
-        document.getElementById('autoBalance').checked = s.autoBalance;
-      } else {
-        document.getElementById('autoBalance').checked = true; // default aan
-      }
+      document.getElementById('autoBalance').checked = (typeof s.autoBalance==='boolean') ? s.autoBalance : true;
       recalcTotals();
     }
   }catch(e){}

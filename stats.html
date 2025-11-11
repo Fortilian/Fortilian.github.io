@@ -87,7 +87,7 @@
   .kpi-row{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:6px}
   .kpi-pill{background:var(--hint);border-radius:999px;padding:6px 10px;font-size:.88rem}
 
-  .highlights{margin-top:8px;display:flex;flex-direction:column;gap:2px;font-size:.9rem}
+  .highlights{margin-top:4px;display:flex;flex-direction:column;gap:3px;font-size:.9rem}
 
   /* Leaderboard – mobiele cards */
   .leaderboard-list{margin:6px 0 2px}
@@ -181,6 +181,24 @@
     background:var(--card);
   }
 
+  /* Heatmap */
+  .heatmap{
+    margin-top:10px;
+  }
+  .heat-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px;
+    margin-top:4px;
+  }
+  .heat-dot{
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    border:1px solid color-mix(in srgb,var(--line) 70%, transparent);
+    background:hsl(210,80%,calc(88% - (var(--level,0) * 40%)));
+  }
+
   /* Overlay (popup) */
   .overlay{
     position:fixed;
@@ -258,7 +276,15 @@
       <div class="kpi-pill">Totale inzet: <b id="kTotalStake">€ 0,00</b></div>
       <div class="kpi-pill">Gem. inzet/avond: <b id="kAvgStake">€ 0,00</b></div>
     </div>
-    <div id="highlights" class="highlights small"></div>
+  </section>
+
+  <!-- Leuke stats / highlights -->
+  <section class="card">
+    <div class="card-header">
+      <h2>Leuke stats</h2>
+      <span class="small muted">Hoogte- en dieptepunten</span>
+    </div>
+    <div id="funStats" class="highlights small"></div>
   </section>
 
   <!-- Leaderboard -->
@@ -292,6 +318,9 @@
         </div>
       </div>
     </div>
+    <div style="margin-top:6px;display:flex;justify-content:center">
+      <button id="chartsMoreBtn" class="btn small ghost">Toon alle grafieken…</button>
+    </div>
   </section>
 
   <!-- Geschiedenis -->
@@ -305,7 +334,7 @@
     </div>
   </section>
 
-  <!-- Backup / Import -->
+  <!-- Back-up / Import -->
   <section class="card">
     <div class="card-header">
       <h2>Back-up</h2>
@@ -322,7 +351,7 @@
   </section>
 </main>
 
-<!-- Overlay voor "toon alles" + speler details -->
+<!-- Overlay voor "toon alles" + speler details + grafieken -->
 <div id="overlay" class="overlay">
   <div class="overlay-backdrop"></div>
   <div class="overlay-card">
@@ -345,10 +374,11 @@ let currentPlayerStats = [];
 let chartTotalPerSession = null;
 let chartPlayerCumulative = null;
 let chartPlayerDetail = null;
+let overlayCharts = [];
 
 // overlay mode + geschiedenis (voor terug van speler -> alle spelers)
-let overlayMode = 'none'; // 'none' | 'leaderboardAll' | 'historyAll' | 'playerDetail' | 'generic'
-let overlayHistory = null; // {title, html, mode}
+let overlayMode = 'none'; // 'none' | 'leaderboardAll' | 'historyAll' | 'playerDetail' | 'chartsAll' | 'generic'
+let overlayHistory = null;
 
 // ===== Utils
 function euro(n){ return (n||0).toLocaleString('nl-NL',{style:'currency',currency:'EUR'}); }
@@ -496,7 +526,7 @@ function renderLeaderboard(players){
   }
 }
 
-// ===== Summary & highlights
+// ===== Summary & fun stats
 function renderSummary(sessions, playerStats){
   const kSessions=document.getElementById('kSessions');
   const kPlayers=document.getElementById('kPlayers');
@@ -524,8 +554,8 @@ function renderSummary(sessions, playerStats){
   }
 }
 
-function renderHighlights(sessions){
-  const el = document.getElementById('highlights');
+function renderFunStats(sessions, playerStats){
+  const el = document.getElementById('funStats');
   if(!el) return;
   if(!sessions.length){
     el.textContent = 'Nog geen highlights.';
@@ -535,13 +565,18 @@ function renderHighlights(sessions){
   let bestStake = null;
   let bestWin = null;
   let worstLoss = null;
+  let biggestTable = null;
 
   sessions.forEach(sess=>{
-    const totalBuyin = (sess.players||[]).reduce((a,p)=>a+Number(p.buyin||0),0);
+    const players = sess.players||[];
+    const totalBuyin = players.reduce((a,p)=>a+Number(p.buyin||0),0);
     if(!bestStake || totalBuyin > bestStake.total){
       bestStake = { total: totalBuyin, date: sess.date };
     }
-    (sess.players||[]).forEach(p=>{
+    if(!biggestTable || players.length > biggestTable.count){
+      biggestTable = { count: players.length, date: sess.date, desc: sess.desc||'Pokeravond' };
+    }
+    players.forEach(p=>{
       const net = typeof p.net==='number' ? p.net : (Number(p.end||0)-Number(p.buyin||0));
       if(net>0 && (!bestWin || net>bestWin.amount)){
         bestWin = { amount:net, name:p.name, date:sess.date };
@@ -552,7 +587,19 @@ function renderHighlights(sessions){
     });
   });
 
+  // extra stats op basis van playerStats
+  const mostSessions = playerStats.slice().sort((a,b)=>b.numSessions-a.numSessions)[0];
+  const bestAvg = playerStats
+    .filter(p=>p.numSessions>=3)
+    .slice()
+    .sort((a,b)=>b.avg-a.avg)[0];
+  const mostSwing = playerStats
+    .filter(p=>p.numSessions>=3)
+    .slice()
+    .sort((a,b)=>b.stdev-a.stdev)[0];
+
   const lines=[];
+
   if(bestWin){
     lines.push(`🔥 Grootste winst: <b>${bestWin.name}</b> (${euro(bestWin.amount)}) — ${fmtDateShort(bestWin.date)}`);
   }
@@ -562,11 +609,41 @@ function renderHighlights(sessions){
   if(bestStake){
     lines.push(`🏆 Hoogste inzet-avond: <b>${fmtDateShort(bestStake.date)}</b> (${euro(bestStake.total)})`);
   }
+  if(mostSessions){
+    lines.push(`👑 Meest gespeelde speler: <b>${mostSessions.name}</b> (${mostSessions.numSessions} avonden)`);
+  }
+  if(bestAvg){
+    lines.push(`📈 Beste gemiddelde (≥3 avonden): <b>${bestAvg.name}</b> (${euro(bestAvg.avg)} per avond)`);
+  }
+  if(mostSwing){
+    lines.push(`🎢 Meest swingende speler (≥3 avonden): <b>${mostSwing.name}</b> (σ ≈ ${euro(mostSwing.stdev)})`);
+  }
+  if(biggestTable){
+    lines.push(`👥 Grootste tafel: <b>${biggestTable.count} spelers</b> — ${fmtDateShort(biggestTable.date)}`);
+  }
+
+  // mini heatmap van inzet per avond
+  if(sessions.length>=2){
+    const sorted = sessions.slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const totals = sorted.map(s=>(s.players||[]).reduce((a,p)=>a+Number(p.buyin||0),0));
+    const maxStake = Math.max(...totals, 1);
+    const dots = sorted.map((s,idx)=>{
+      const level = totals[idx]/maxStake;
+      const title = `${fmtDateShort(s.date)} — ${euro(totals[idx])}`;
+      return `<span class="heat-dot" title="${title}" style="--level:${level.toFixed(2)}"></span>`;
+    }).join('');
+    lines.push(`
+      <div class="heatmap">
+        <div>🔥 Inzet-intensiteit over avonden</div>
+        <div class="heat-row">${dots}</div>
+      </div>
+    `);
+  }
 
   if(!lines.length){
     el.textContent='Nog geen highlights.';
   }else{
-    el.innerHTML = lines.map(l=>`<div>${l}</div>`).join('');
+    el.innerHTML = lines.map(l=> l.startsWith('<div class="heatmap">') ? l : `<div>${l}</div>`).join('');
   }
 }
 
@@ -648,10 +725,21 @@ function resetPlayerChart(){
     chartPlayerDetail = null;
   }
 }
+function resetOverlayCharts(){
+  if(overlayCharts && overlayCharts.length){
+    overlayCharts.forEach(ch=>{ try{ ch.destroy(); }catch(e){} });
+    overlayCharts = [];
+  }
+}
 
 function openOverlay(title, html, mode='generic'){
   if(mode !== 'playerDetail'){
     resetPlayerChart();
+  }
+  if(mode !== 'chartsAll'){
+    resetOverlayCharts();
+  }
+  if(mode !== 'playerDetail'){
     overlayHistory = null;
   }
   overlayMode = mode;
@@ -663,6 +751,7 @@ function openOverlay(title, html, mode='generic'){
 
 function closeOverlay(){
   resetPlayerChart();
+  resetOverlayCharts();
   overlayMode = 'none';
   overlayHistory = null;
   const ov = document.getElementById('overlay');
@@ -813,10 +902,14 @@ function openPlayerDetail(name){
   buildPlayerDetailChart(labels,cumData);
 }
 
-// ===== Charts
+// ===== Charts op hoofd-pagina
 function buildCharts(sessions, playerStats){
-  const ctxTotal = document.getElementById('chartTotalPerSession').getContext('2d');
-  const ctxPlayers = document.getElementById('chartPlayerCumulative').getContext('2d');
+  const canvasTotal = document.getElementById('chartTotalPerSession');
+  const canvasPlayers = document.getElementById('chartPlayerCumulative');
+  if(!canvasTotal || !canvasPlayers) return;
+
+  const ctxTotal = canvasTotal.getContext('2d');
+  const ctxPlayers = canvasPlayers.getContext('2d');
 
   const sortedSessions = sessions.slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
   const labels = sortedSessions.map(s=>fmtDateShort(s.date));
@@ -871,6 +964,137 @@ function buildCharts(sessions, playerStats){
       scales:{x:{display:false}}
     }
   });
+}
+
+// ===== Charts in overlay ("Toon alle grafieken")
+function createChartsOverlayMarkup(sessions, playerStats){
+  if(!sessions.length){
+    return '<p class="small muted">Nog geen data om grafieken te tonen.</p>';
+  }
+  return `
+    <div class="chart-block" style="margin-bottom:10px;">
+      <div class="small muted">Totaal inzet per avond</div>
+      <div class="chart-box large">
+        <canvas id="ovChartTotal"></canvas>
+      </div>
+    </div>
+    <div class="chart-block" style="margin-bottom:10px;">
+      <div class="small muted">Totale winst per speler</div>
+      <div class="chart-box large">
+        <canvas id="ovChartNetPerPlayer"></canvas>
+      </div>
+    </div>
+    <div class="chart-block" style="margin-bottom:10px;">
+      <div class="small muted">Totale inzet per speler</div>
+      <div class="chart-box large">
+        <canvas id="ovChartStakePerPlayer"></canvas>
+      </div>
+    </div>
+    <div class="chart-block" style="margin-bottom:10px;">
+      <div class="small muted">Win-rate per speler</div>
+      <div class="chart-box large">
+        <canvas id="ovChartWinratePerPlayer"></canvas>
+      </div>
+    </div>
+  `;
+}
+
+function buildChartsOverlay(sessions, playerStats){
+  if(!sessions.length) return;
+
+  const sortedSessions = sessions.slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const labelsSessions = sortedSessions.map(s=>fmtDateShort(s.date));
+  const totals = sortedSessions.map(s=>(s.players||[]).reduce((a,p)=>a+Number(p.buyin||0),0));
+
+  // inzet per avond (overlay)
+  const ctxTotal = document.getElementById('ovChartTotal')?.getContext('2d');
+  if(ctxTotal){
+    overlayCharts.push(new Chart(ctxTotal,{
+      type:'line',
+      data:{
+        labels:labelsSessions,
+        datasets:[{
+          label:'Inzet per avond',
+          data:totals,
+          tension:0.25
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{x:{display:true}}
+      }
+    }));
+  }
+
+  // totale winst per speler
+  const ctxNet = document.getElementById('ovChartNetPerPlayer')?.getContext('2d');
+  if(ctxNet && playerStats.length){
+    const labels = playerStats.map(p=>p.name);
+    const data = playerStats.map(p=>p.total);
+    overlayCharts.push(new Chart(ctxNet,{
+      type:'bar',
+      data:{
+        labels,
+        datasets:[{label:'Totale winst',data}]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{x:{ticks:{autoSkip:false}}}
+      }
+    }));
+  }
+
+  // totale inzet per speler
+  const ctxStake = document.getElementById('ovChartStakePerPlayer')?.getContext('2d');
+  if(ctxStake){
+    const stakeMap = new Map();
+    sessions.forEach(sess=>{
+      (sess.players||[]).forEach(p=>{
+        const name = p.name || 'Onbekend';
+        const prev = stakeMap.get(name) || 0;
+        stakeMap.set(name, prev + Number(p.buyin||0));
+      });
+    });
+    const stakeArr = Array.from(stakeMap.entries()).map(([name,value])=>({name,value}));
+    stakeArr.sort((a,b)=>b.value-a.value);
+    const labels = stakeArr.map(x=>x.name);
+    const data = stakeArr.map(x=>x.value);
+
+    overlayCharts.push(new Chart(ctxStake,{
+      type:'bar',
+      data:{labels,datasets:[{label:'Totale inzet',data}]},
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{x:{ticks:{autoSkip:false}}}
+      }
+    }));
+  }
+
+  // win-rate per speler
+  const ctxWin = document.getElementById('ovChartWinratePerPlayer')?.getContext('2d');
+  if(ctxWin && playerStats.length){
+    const labels = playerStats.map(p=>p.name);
+    const data = playerStats.map(p=>p.winRate);
+    overlayCharts.push(new Chart(ctxWin,{
+      type:'bar',
+      data:{labels,datasets:[{label:'Win-rate (%)',data}]},
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          y:{beginAtZero:true,max:100},
+          x:{ticks:{autoSkip:false}}
+        }
+      }
+    }));
+  }
 }
 
 // ===== Backup export/import
@@ -932,10 +1156,12 @@ async function importBackup(file){
     currentSessions = all;
     currentPlayerStats = stats;
     renderSummary(all,stats);
-    renderHighlights(all);
+    renderFunStats(all,stats);
     renderLeaderboard(stats);
     renderHistory(all);
-    buildCharts(all,stats);
+    if(all.length){
+      buildCharts(all,stats);
+    }
     status.textContent='Import voltooid ✔︎';
   }catch(e){
     console.error(e);
@@ -951,9 +1177,13 @@ async function init(){
     currentSessions = sessions;
     currentPlayerStats = stats;
     renderSummary(sessions,stats);
-    renderHighlights(sessions);
+    renderFunStats(sessions,stats);
     renderLeaderboard(stats);
     renderHistory(sessions);
+    const chartsMoreBtn = document.getElementById('chartsMoreBtn');
+    if(!sessions.length && chartsMoreBtn){
+      chartsMoreBtn.style.display = 'none';
+    }
     if(sessions.length){
       buildCharts(sessions,stats);
     }
@@ -967,6 +1197,13 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{ exportBacku
 document.getElementById('importInput').addEventListener('change', (e)=>{
   const f=e.target.files && e.target.files[0];
   if(f) importBackup(f);
+});
+
+// "Toon alle grafieken"
+document.getElementById('chartsMoreBtn').addEventListener('click', ()=>{
+  const html = createChartsOverlayMarkup(currentSessions, currentPlayerStats);
+  openOverlay('Alle grafieken', html, 'chartsAll');
+  buildChartsOverlay(currentSessions, currentPlayerStats);
 });
 
 // Speler-kliks (leaderboard + overlay-leaderboard)
@@ -1004,7 +1241,7 @@ document.addEventListener('click', async (e)=>{
     currentSessions = sessions;
     currentPlayerStats = stats;
     renderSummary(sessions,stats);
-    renderHighlights(sessions);
+    renderFunStats(sessions,stats);
     renderLeaderboard(stats);
     renderHistory(sessions);
     if(sessions.length){
@@ -1023,6 +1260,11 @@ document.addEventListener('click', async (e)=>{
       }else if(title.startsWith('Speler: ')){
         const name = title.replace('Speler: ','').trim();
         openPlayerDetail(name);
+      }else if(title.startsWith('Alle grafieken')){
+        const html = createChartsOverlayMarkup(sessions, stats);
+        document.getElementById('overlayBody').innerHTML = html;
+        resetOverlayCharts();
+        buildChartsOverlay(sessions, stats);
       }
     }
   }catch(err){

@@ -1,6 +1,6 @@
 // Poker Split — Service Worker
 // Bump deze VERSION bij elke release
-const VERSION = 'v5-2025-10-12';
+const VERSION = 'v6-2025-10-31';
 const STATIC_CACHE  = `ps-static-${VERSION}`;
 const RUNTIME_CACHE = `ps-runtime-${VERSION}`;
 
@@ -10,7 +10,7 @@ const STATIC_ASSETS = [
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/apple-touch-icon.png',
-  // voeg hier je css/js/logo’s toe, maar GEEN index.html
+  '/chart.min.js'
 ];
 
 // Install: alleen statische assets cachen
@@ -49,18 +49,30 @@ self.addEventListener('fetch', (event) => {
     event.respondWith((async () => {
       try {
         const fresh = await fetch(req, { cache: 'no-store' });
-        // Bewaar/refresh een offline fallback
+        // Bewaar/refresh offline fallback
         const copy = fresh.clone();
         const cache = await caches.open(RUNTIME_CACHE);
-        cache.put('/', copy.clone()).catch(()=>{});
-        cache.put('/index.html', copy.clone()).catch(()=>{});
+        const path = url.pathname;
+        cache.put(path, copy.clone()).catch(()=>{});
+        if (path === '/' || path.endsWith('/index.html')) {
+          cache.put('/', copy.clone()).catch(()=>{});
+          cache.put('/index.html', copy.clone()).catch(()=>{});
+        }
+        if (path.endsWith('/stats.html') || path.endsWith('/stats')) {
+          cache.put('/stats', copy.clone()).catch(()=>{});
+          cache.put('/stats.html', copy.clone()).catch(()=>{});
+        }
         return fresh;
       } catch (err) {
-        // Offline fallback
         const cache = await caches.open(RUNTIME_CACHE);
-        return (await cache.match('/')) ||
-               (await cache.match('/index.html')) ||
-               new Response('Offline', { status: 503, statusText: 'Offline' });
+        let cachedRes = await cache.match(url.pathname);
+        if (!cachedRes && url.pathname.startsWith('/stats')) {
+          cachedRes = await cache.match('/stats.html') || await cache.match('/stats');
+        }
+        if (!cachedRes) {
+          cachedRes = await cache.match('/') || await cache.match('/index.html');
+        }
+        return cachedRes || new Response('Offline', { status: 503, statusText: 'Offline' });
       }
     })());
     return;

@@ -89,18 +89,25 @@
     flex:1 1 auto;
     min-width:0;
   }
-  .stepper button{
+  .stepper button,
+  .icon-btn{
+    padding:6px 12px;
     min-width:46px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1rem;
+    border-radius:12px;
   }
 
   /* resultaat-rij (W/V + AB + delete) */
-  .result-wrap{
+    .result-wrap{
     display:flex;
     align-items:center;
+    justify-content:space-between;   /* duwt prullenbak helemaal naar rechts */
     gap:10px;
-    justify-content:flex-start;
-    flex-wrap:nowrap;
-    padding:4px 10;           /* geen links/rechts padding – dat doet de <td> al */
+    width:100%;                      /* zelfde breedte als stepper-blokken */
+    padding:0;                       /* zelfde verticale marge als de +10-knoppen */
     border-radius:999px;
     background:transparent;
     transition:background .15s ease-out;
@@ -120,7 +127,9 @@
   .ab-label{
     display:inline-flex;
     align-items:center;
-    gap:0px;             /* minder ruimte tussen checkbox en "AB?" */
+    max-width:15px;
+    padding-left:15px;
+    gap:10px;             /* minder ruimte tussen checkbox en "AB?" */
     font-size:.85rem;
     color:var(--muted);
     white-space:nowrap;
@@ -129,6 +138,7 @@
     /* Checkbox zelf: marge weg + kleiner formaat */
   .ab-label input[type="checkbox"]{
     margin:0;
+    max-width:15px;
     width:16px;
     height:16px;
     padding:0;
@@ -147,14 +157,13 @@
 
   /* prullenbak-knop, slot even breed als +10 */
   .icon-btn{
-    padding:0;
-    min-width:46px;
-    height:34px;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    font-size:1rem;
-  }
+  min-width:46px;              /* zelfde breedte als stepper-knoppen */
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:1rem;
+  /* geen eigen padding/height hier, dan blijft hij gelijk aan andere buttons */
+}
 
   /* Settings layout */
   .settings-grid{
@@ -176,7 +185,10 @@
   tbody tr:nth-child(even){background:var(--row-alt)}
   tbody tr:hover{background:color-mix(in srgb, var(--row-active) 55%, transparent)}
   tr.active-row{background:var(--row-active)}
-  td.right input{width:100%;min-width:70px}
+  td.right input[type="number"]{
+  width:100%;
+  min-width:70px;
+  }
 
   @media (max-width:640px){
     table thead{display:none}

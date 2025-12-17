@@ -1,4 +1,4 @@
-const CACHE_NAME = 'poker-split-v2';
+const CACHE_NAME = 'poker-split-v3';
 const ASSETS = [
     './',
     './index.html',
@@ -31,3 +31,4 @@ self.addEventListener('activate', (e) => {
         })
     );
 });
+

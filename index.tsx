@@ -412,9 +412,9 @@ input,select,textarea { font:inherit; padding:12px 14px; border-radius:12px; bor
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); background: var(--card); }
 
 /* Icons & Buttons */
-.glass-close-btn { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; line-height: 1; padding-bottom: 2px; cursor: pointer; background: rgba(180, 180, 185, 0.25); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); color: #ffffff !important; transition: all 0.2s; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-.glass-close-btn:active { transform: scale(0.95); }
-@media (prefers-color-scheme: dark) { .glass-close-btn { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.15); } }
+.glass-close-btn { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; line-height: 1; padding-bottom: 2px; cursor: pointer; background: rgba(200, 200, 210, 0.5); backdrop-filter: blur(16px) saturate(1.5); -webkit-backdrop-filter: blur(16px) saturate(1.5); border: 1px solid rgba(255, 255, 255, 0.5); color: rgba(60, 60, 70, 0.85) !important; transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease; z-index: 50; box-shadow: 0 2px 12px rgba(0,0,0,0.1), inset 0 1px 2px rgba(255,255,255,0.6); }
+.glass-close-btn:active { transform: scale(0.85); background: rgba(140, 140, 155, 0.7); box-shadow: 0 0 2px rgba(0,0,0,0.15), inset 0 2px 4px rgba(0,0,0,0.1); }
+@media (prefers-color-scheme: dark) { .glass-close-btn { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.2); color: rgba(255,255,255,0.9) !important; box-shadow: 0 2px 12px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.1); } }
 
 .settings-header { display: flex; gap: 8px; align-items: center; }
 .settings-input { flex: 1; }
@@ -620,9 +620,17 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ba
 .action-btn:active { transform: scale(0.96); opacity: 0.9; }
 
 /* Modals & History */
-.list-item { display: flex; align-items: center; padding: 14px 12px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background 0.2s; }
+.list-item { display: flex; align-items: center; padding: 14px 12px 14px 16px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background 0.2s; }
 .list-item:last-child { border-bottom: none; }
-.list-rank { width: 32px; font-weight: 700; font-size: 1.1rem; color: var(--muted); text-align: center; margin-right: 12px; flex-shrink: 0; }
+.list-rank { 
+  width: 30px; height: 30px; font-weight: 700; font-size: 0.85rem; color: var(--muted); 
+  text-align: center; margin-right: 16px; flex-shrink: 0; 
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: var(--bg);
+}
+.list-rank.gold { background: linear-gradient(135deg, #FFD700, #FFA500); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+.list-rank.silver { background: linear-gradient(135deg, #C0C0C0, #A0A0A0); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+.list-rank.bronze { background: linear-gradient(135deg, #CD7F32, #A0522D); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
 .list-content { flex: 1; min-width: 0; }
 .list-title { font-weight: 600; font-size: 1rem; color: var(--fg); margin-bottom: 2px; }
 .list-sub { font-size: 0.85rem; color: var(--muted); }
@@ -1555,11 +1563,13 @@ function GlassModal({
               <h2>{title}</h2>
               {subtitle && <div className="modal-subtitle">{subtitle}</div>}
             </div>
-            <button className="glass-close-btn" onClick={onClose}>
-              ✕
-            </button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {headerContent}
+              <button className="glass-close-btn" onClick={onClose}>
+                ✕
+              </button>
+            </div>
           </div>
-          {headerContent && <div className="modal-sticky-content">{headerContent}</div>}
         </div>
 
         <div className="modal-body" ref={bodyRef}>
@@ -2344,6 +2354,7 @@ function Stats({ showSearchModal, setShowSearchModal, isActive, dataVersion, onD
 
   const [showAllCharts, setShowAllCharts] = useState(false);
   const [showAllLeaderboardModal, setShowAllLeaderboardModal] = useState(false);
+  const [showAllPlayersInLeaderboard, setShowAllPlayersInLeaderboard] = useState(false); // Toggle for 3+ game filter
   const [showAllHistoryModal, setShowAllHistoryModal] = useState(false);
   const [showAllStatsModal, setShowAllStatsModal] = useState(false);
   const [showPotHistoryModal, setShowPotHistoryModal] = useState(false);
@@ -2672,7 +2683,7 @@ function Stats({ showSearchModal, setShowSearchModal, isActive, dataVersion, onD
         type: 'line', data: { labels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } },
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 16 } } },
           scales: {
             x: { display: false, grid: { color: gridColor } },
             y: { grid: { color: gridColor } }
@@ -2774,7 +2785,9 @@ function Stats({ showSearchModal, setShowSearchModal, isActive, dataVersion, onD
     if (player) setSelectedPlayer(player);
   };
 
-  const visibleLeaderboard = stats.slice(0, 5);
+  // Leaderboard: Only show players with 3+ games for fairness
+  const qualifiedStats = stats.filter((s: any) => s.count >= 3);
+  const visibleLeaderboard = qualifiedStats.slice(0, 5);
 
   // Render History List
   const historyList = useMemo(() => {
@@ -2909,7 +2922,7 @@ function Stats({ showSearchModal, setShowSearchModal, isActive, dataVersion, onD
         <div>
           {visibleLeaderboard.map((s: any, i: number) => (
             <div key={s.name} className="list-item" onClick={() => setSelectedPlayer(s)}>
-              <div className="list-rank">{i + 1}</div>
+              <div className={`list-rank ${i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : ''}`}>{i + 1}</div>
               <div className="list-content">
                 <div className="list-title">{s.name}</div>
                 <div className="list-sub">{s.count}x gespeeld</div>
@@ -2917,15 +2930,15 @@ function Stats({ showSearchModal, setShowSearchModal, isActive, dataVersion, onD
               <div className={`list-value ${s.total >= 0 ? 'pos' : 'neg'}`} style={{ paddingRight: '20px' }}>{euro(s.total)}</div>
             </div>
           ))}
-          {stats.length > 5 && (
+          {(qualifiedStats.length > 5 || stats.length > qualifiedStats.length) && (
             <div className="card-footer" style={{ paddingTop: '0' }}>
               <button className="pill" onClick={() => setShowAllLeaderboardModal(true)}>Toon alles ({stats.length})</button>
             </div>
           )}
-          {stats.length === 0 && (
+          {qualifiedStats.length === 0 && (
             <div style={{ textAlign: 'center', padding: '30px 20px' }}>
               <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🏆</div>
-              <div className="small muted">Speel avonden om het leaderboard te vullen!</div>
+              <div className="small muted">Speel minimaal 3 avonden om op het leaderboard te komen!</div>
             </div>
           )}
         </div>
@@ -3168,10 +3181,25 @@ function Stats({ showSearchModal, setShowSearchModal, isActive, dataVersion, onD
       </GlassModal>
 
       {/* All Leaderboard Modal */}
-      <GlassModal isOpen={showAllLeaderboardModal} onClose={() => setShowAllLeaderboardModal(false)} title="Leaderboard" subtitle={filterLabel}>
-        {stats.map((s: any, i: number) => (
+      <GlassModal
+        isOpen={showAllLeaderboardModal}
+        onClose={() => setShowAllLeaderboardModal(false)}
+        title="Leaderboard"
+        subtitle={showAllPlayersInLeaderboard ? "Alle spelers" : "Min. 3x gespeeld"}
+        headerContent={
+          <button
+            className="glass-close-btn"
+            onClick={() => setShowAllPlayersInLeaderboard(!showAllPlayersInLeaderboard)}
+            style={{ opacity: showAllPlayersInLeaderboard ? 1 : 0.5 }}
+            title={showAllPlayersInLeaderboard ? "Toon alleen gekwalificeerde spelers" : "Toon alle spelers"}
+          >
+            👁️
+          </button>
+        }
+      >
+        {(showAllPlayersInLeaderboard ? stats : qualifiedStats).map((s: any, i: number) => (
           <div key={s.name} className="list-item" onClick={() => { setSelectedPlayer(s); }}>
-            <div className="list-rank">{i + 1}</div>
+            <div className={`list-rank ${i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : ''}`}>{i + 1}</div>
             <div className="list-content">
               <div className="list-title">{s.name}</div>
               <div className="list-sub">{s.count}x gespeeld</div>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'poker-split-v3';
+const CACHE_NAME = 'poker-split-v4';
 const ASSETS = [
     './',
     './index.html',

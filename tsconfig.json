@@ -3,15 +3,23 @@
     "target": "ES2018",
     "module": "ESNext",
     "jsx": "react-jsx",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "strict": false,
     "skipLibCheck": true,
-    "lib": ["DOM", "DOM.Iterable", "ES2018"],
-    "types": ["react", "react-dom"],
-    "noEmitOnError": false,
-    "outDir": "./dist"
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ES2018"
+    ],
+    "types": [
+      "react",
+      "react-dom"
+    ],
+    "noEmitOnError": false
   },
-  "include": ["index.tsx"]
+  "include": [
+    "index.tsx"
+  ]
 }

@@ -1417,6 +1417,7 @@ function GlassModal({
   children,
   zIndex = 3000,          // base z-index
   headerContent,
+  headerButtons,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -1425,6 +1426,7 @@ function GlassModal({
   children: React.ReactNode;
   zIndex?: number;
   headerContent?: React.ReactNode;
+  headerButtons?: React.ReactNode;
 }) {
   // NEW LOGIC: Render immediately when isOpen is true to support autofocus
   const [isVisible, setIsVisible] = useState(false); // Controls CSS transition class
@@ -1564,12 +1566,13 @@ function GlassModal({
               {subtitle && <div className="modal-subtitle">{subtitle}</div>}
             </div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              {headerContent}
+              {headerButtons}
               <button className="glass-close-btn" onClick={onClose}>
                 ✕
               </button>
             </div>
           </div>
+          {headerContent && <div className="modal-sticky-content">{headerContent}</div>}
         </div>
 
         <div className="modal-body" ref={bodyRef}>
@@ -3186,7 +3189,7 @@ function Stats({ showSearchModal, setShowSearchModal, isActive, dataVersion, onD
         onClose={() => setShowAllLeaderboardModal(false)}
         title="Leaderboard"
         subtitle={showAllPlayersInLeaderboard ? "Alle spelers" : "Min. 3x gespeeld"}
-        headerContent={
+        headerButtons={
           <button
             className="glass-close-btn"
             onClick={() => setShowAllPlayersInLeaderboard(!showAllPlayersInLeaderboard)}

@@ -867,6 +867,7 @@ mask-image: linear-gradient(
   animation: viewFadeIn 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
+
 @keyframes pill-pulse {
   0% { transform: scale(0.96); opacity: 0.85; }
   60% { transform: scale(1.05); opacity: 1; }
@@ -1614,9 +1615,12 @@ function App() {
     const [view, setView] = useState('calculator');
     const [diff, setDiff] = useState(0);
     const [showSearchModal, setShowSearchModal] = useState(false);
-    return (_jsxs(_Fragment, { children: [_jsx("style", { children: STYLES }), _jsx("div", { className: "statusbar-blur" }), _jsxs("div", { className: "page-content", children: [_jsx("header", { className: "topbar", children: _jsx("h1", { className: "view-fade", children: view === 'calculator' ? '💸 Poker Split' : '📊 Statistieken' }, view) }), _jsxs("main", { className: "view-fade", children: [_jsx("div", { style: { display: view === 'calculator' ? 'block' : 'none' }, children: _jsx(Calculator, { onDiffChange: setDiff, isActive: view === 'calculator' }) }), view === 'stats' && _jsx(Stats, { showSearchModal: showSearchModal, setShowSearchModal: setShowSearchModal })] }, view)] }), _jsx("div", { className: "floating-dock-left", children: _jsxs("div", { className: "glass nav-container", children: [_jsx("div", { className: "nav-bg", style: { transform: view === 'calculator' ? 'translateX(0%)' : 'translateX(100%)' } }), _jsx("button", { className: `nav-btn ${view === 'calculator' ? 'active' : ''}`, onClick: () => setView('calculator'), children: "Calculator" }), _jsx("button", { className: `nav-btn ${view === 'stats' ? 'active' : ''}`, onClick: () => setView('stats'), children: "Stats" })] }) }), _jsx(MorphingFab, { view: view, diff: diff, onSearchClick: () => setShowSearchModal(true) })] }));
+    // Data version counter for cache invalidation
+    const [dataVersion, setDataVersion] = useState(0);
+    const handleSessionSaved = () => setDataVersion(v => v + 1);
+    return (_jsxs(_Fragment, { children: [_jsx("style", { children: STYLES }), _jsx("div", { className: "statusbar-blur" }), _jsxs("div", { className: "page-content", children: [_jsx("header", { className: "topbar", children: _jsx("h1", { className: "view-fade", children: view === 'calculator' ? '💸 Poker Split' : '📊 Statistieken' }, view) }), _jsxs("main", { children: [_jsx("div", { style: { display: view === 'calculator' ? 'block' : 'none' }, children: _jsx(Calculator, { onDiffChange: setDiff, isActive: view === 'calculator', onSessionSaved: handleSessionSaved }) }), _jsx("div", { style: { display: view === 'stats' ? 'block' : 'none' }, children: _jsx(Stats, { showSearchModal: showSearchModal, setShowSearchModal: setShowSearchModal, isActive: view === 'stats', dataVersion: dataVersion, onDataChanged: handleSessionSaved }) })] })] }), _jsx("div", { className: "floating-dock-left", children: _jsxs("div", { className: "glass nav-container", children: [_jsx("div", { className: "nav-bg", style: { transform: view === 'calculator' ? 'translateX(0%)' : 'translateX(100%)' } }), _jsx("button", { className: `nav-btn ${view === 'calculator' ? 'active' : ''}`, onClick: () => setView('calculator'), children: "Calculator" }), _jsx("button", { className: `nav-btn ${view === 'stats' ? 'active' : ''}`, onClick: () => setView('stats'), children: "Stats" })] }) }), _jsx(MorphingFab, { view: view, diff: diff, onSearchClick: () => setShowSearchModal(true) })] }));
 }
-function Calculator({ onDiffChange, isActive }) {
+function Calculator({ onDiffChange, isActive, onSessionSaved }) {
     const [desc, setDesc] = useState('Pokeravond');
     const [players, setPlayers] = useState([
         { id: 1, name: 'Julian', buyin: '10', end: '', ab: true },
@@ -1816,6 +1820,7 @@ function Calculator({ onDiffChange, isActive }) {
         };
         try {
             await saveSessionToDB(session);
+            onSessionSaved(); // Notify App that data changed
             handleCalculate();
             // Show success toast
             setShowSuccessToast(true);
@@ -1870,7 +1875,7 @@ function Calculator({ onDiffChange, isActive }) {
                     return (_jsx(SwipeRow, { forceDelete: removingIds.has(p.id), onDelete: () => removePlayer(p.id), children: _jsxs("div", { className: "player-card-flex", children: [_jsx("div", { className: "name-section", onClick: e => e.stopPropagation(), children: _jsx("input", { className: "name-input", value: p.name, onClick: e => e.stopPropagation(), onChange: ev => updatePlayer(p.id, 'name', ev.target.value), placeholder: "Naam" }) }), _jsxs("div", { className: "controls-section", children: [_jsxs("div", { className: "control-row", onClick: e => e.stopPropagation(), children: [_jsx("div", { className: "label-text", children: "IN" }), _jsxs("div", { className: "stepper-pill", children: [_jsx("button", { onClick: () => stepVal(p.id, 'buyin', -10), children: "-" }), _jsx(MoneyInput, { value: p.buyin, onChange: (v) => updatePlayer(p.id, 'buyin', v), placeholder: "0" }), _jsx("button", { onClick: () => stepVal(p.id, 'buyin', 10), children: "+" })] }), _jsx(ResultPill, { net: net })] }), _jsxs("div", { className: "control-row", onClick: e => e.stopPropagation(), children: [_jsx("div", { className: "label-text", children: "UIT" }), _jsxs("div", { className: "stepper-pill", children: [_jsx("button", { onClick: () => stepVal(p.id, 'end', -10), children: "-" }), _jsx(MoneyInput, { value: p.end, onChange: (v) => updatePlayer(p.id, 'end', v), placeholder: "0" }), _jsx("button", { onClick: () => stepVal(p.id, 'end', 10), children: "+" })] }), _jsx("button", { className: `ab-button ${p.ab ? 'active' : ''}`, onClick: (e) => { e.stopPropagation(); toggleAB(p.id); }, title: "Auto-balance deelnemer", children: _jsx(SparklesIcon, {}) })] })] })] }) }, p.id));
                 }) }), _jsxs("div", { className: "action-bar-static", children: [_jsx("button", { className: "action-btn", onClick: handleSaveSession, children: "Opslaan" }), _jsx("button", { className: "action-btn primary", onClick: handleCalculate, children: "Bereken" })] }), result && (_jsxs("div", { id: "result-area", className: "card", style: { border: '1px solid var(--accent)' }, children: [_jsxs("div", { style: { display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center' }, children: [_jsx("h3", { children: "Resultaat" }), _jsx("button", { className: "pill", onClick: handleShare, children: "\uD83D\uDCE4 Delen" })] }), autoBalanceInfo && _jsx("div", { className: "small muted", style: { marginBottom: '10px', fontStyle: 'italic' }, children: autoBalanceInfo }), result.transfers.length === 0 ? _jsx("p", { className: "muted", children: "Geen transacties." }) : result.transfers.map((t, i) => (_jsxs("div", { style: { display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--line)' }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' }, children: [_jsx("span", { style: { fontWeight: 'bold', color: 'var(--success)' }, children: t.to }), _jsx("span", { className: "muted", style: { fontSize: '0.9rem' }, children: "krijgt van" }), _jsx("span", { style: { fontWeight: 'bold', color: 'var(--danger)' }, children: t.from })] }), _jsx("span", { style: { fontWeight: 'bold' }, children: euro(t.amount) })] }, i)))] })), showSuccessToast && (_jsx("div", { className: "toast-container", children: _jsx("div", { className: `toast success ${toastExiting ? 'exiting' : ''}`, children: _jsx("span", { children: "\u2713 Avond opgeslagen!" }) }) }))] }));
 }
-function Stats({ showSearchModal, setShowSearchModal }) {
+function Stats({ showSearchModal, setShowSearchModal, isActive, dataVersion, onDataChanged }) {
     const [allSessions, setAllSessions] = useState([]);
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const [selectedSession, setSelectedSession] = useState(null);
@@ -1882,6 +1887,8 @@ function Stats({ showSearchModal, setShowSearchModal }) {
     const [showPotHistoryModal, setShowPotHistoryModal] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
     const [expandedPotSessionId, setExpandedPotSessionId] = useState(null);
+    // Cache invalidation - track which dataVersion we last loaded
+    const lastLoadedVersion = useRef(-1);
     // Undo delete toast
     const [pendingDelete, setPendingDelete] = useState(null);
     const [toastExiting, setToastExiting] = useState(false);
@@ -1963,7 +1970,14 @@ function Stats({ showSearchModal, setShowSearchModal }) {
             setIsLoaded(true);
         }
     };
-    useEffect(() => { reload(); }, []);
+    useEffect(() => { reload(); lastLoadedVersion.current = dataVersion; }, []);
+    // Reload data when switching to Stats view ONLY if data has changed
+    useEffect(() => {
+        if (isActive && dataVersion !== lastLoadedVersion.current) {
+            reload();
+            lastLoadedVersion.current = dataVersion;
+        }
+    }, [isActive, dataVersion]);
     // Compute filtered sessions
     const sessions = useMemo(() => {
         return filterSessionsForStats(allSessions, statsFilter, customLastN);
@@ -2209,6 +2223,7 @@ function Stats({ showSearchModal, setShowSearchModal }) {
             setTimeout(async () => {
                 try {
                     await deleteSessionFromDB(id);
+                    onDataChanged(); // Notify App that data changed
                 }
                 catch (err) {
                     console.error('Delete error:', err);
@@ -2250,6 +2265,7 @@ function Stats({ showSearchModal, setShowSearchModal }) {
                 if (Array.isArray(d.sessions)) {
                     for (const s of d.sessions)
                         await saveSessionToDB(s);
+                    onDataChanged(); // Notify App that data changed
                     reload();
                     alert('Import gelukt!');
                 }

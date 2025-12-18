@@ -879,6 +879,7 @@ mask-image: linear-gradient(
   animation: viewFadeIn 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
+
 @keyframes pill-pulse {
   0% { transform: scale(0.96); opacity: 0.85; }
   60% { transform: scale(1.05); opacity: 1; }
@@ -1901,6 +1902,10 @@ function App() {
   const [diff, setDiff] = useState(0);
   const [showSearchModal, setShowSearchModal] = useState(false);
 
+  // Data version counter for cache invalidation
+  const [dataVersion, setDataVersion] = useState(0);
+  const handleSessionSaved = () => setDataVersion(v => v + 1);
+
   return (
     <>
       <style>{STYLES}</style>
@@ -1910,11 +1915,13 @@ function App() {
           <h1 key={view} className="view-fade">{view === 'calculator' ? '💸 Poker Split' : '📊 Statistieken'}</h1>
         </header>
 
-        <main key={view} className="view-fade">
+        <main>
           <div style={{ display: view === 'calculator' ? 'block' : 'none' }}>
-            <Calculator onDiffChange={setDiff} isActive={view === 'calculator'} />
+            <Calculator onDiffChange={setDiff} isActive={view === 'calculator'} onSessionSaved={handleSessionSaved} />
           </div>
-          {view === 'stats' && <Stats showSearchModal={showSearchModal} setShowSearchModal={setShowSearchModal} />}
+          <div style={{ display: view === 'stats' ? 'block' : 'none' }}>
+            <Stats showSearchModal={showSearchModal} setShowSearchModal={setShowSearchModal} isActive={view === 'stats'} dataVersion={dataVersion} onDataChanged={handleSessionSaved} />
+          </div>
         </main>
       </div>
 
@@ -1935,7 +1942,7 @@ function App() {
   );
 }
 
-function Calculator({ onDiffChange, isActive }: { onDiffChange: (n: number) => void, isActive: boolean }) {
+function Calculator({ onDiffChange, isActive, onSessionSaved }: { onDiffChange: (n: number) => void, isActive: boolean, onSessionSaved: () => void }) {
   const [desc, setDesc] = useState('Pokeravond');
   const [players, setPlayers] = useState<any[]>([
     { id: 1, name: 'Julian', buyin: '10', end: '', ab: true },
@@ -2137,6 +2144,7 @@ function Calculator({ onDiffChange, isActive }: { onDiffChange: (n: number) => v
     };
     try {
       await saveSessionToDB(session);
+      onSessionSaved(); // Notify App that data changed
       handleCalculate();
 
       // Show success toast
@@ -2328,7 +2336,7 @@ function Calculator({ onDiffChange, isActive }: { onDiffChange: (n: number) => v
   );
 }
 
-function Stats({ showSearchModal, setShowSearchModal }: { showSearchModal: boolean, setShowSearchModal: (v: boolean) => void }) {
+function Stats({ showSearchModal, setShowSearchModal, isActive, dataVersion, onDataChanged }: { showSearchModal: boolean, setShowSearchModal: (v: boolean) => void, isActive: boolean, dataVersion: number, onDataChanged: () => void }) {
   const [allSessions, setAllSessions] = useState<any[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [selectedSession, setSelectedSession] = useState<any>(null);
@@ -2341,6 +2349,9 @@ function Stats({ showSearchModal, setShowSearchModal }: { showSearchModal: boole
   const [showPotHistoryModal, setShowPotHistoryModal] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [expandedPotSessionId, setExpandedPotSessionId] = useState<string | null>(null);
+
+  // Cache invalidation - track which dataVersion we last loaded
+  const lastLoadedVersion = useRef(-1);
 
   // Undo delete toast
   const [pendingDelete, setPendingDelete] = useState<{ id: string, session: any, timer: number } | null>(null);
@@ -2427,7 +2438,15 @@ function Stats({ showSearchModal, setShowSearchModal }: { showSearchModal: boole
       setIsLoaded(true);
     }
   };
-  useEffect(() => { reload(); }, []);
+  useEffect(() => { reload(); lastLoadedVersion.current = dataVersion; }, []);
+
+  // Reload data when switching to Stats view ONLY if data has changed
+  useEffect(() => {
+    if (isActive && dataVersion !== lastLoadedVersion.current) {
+      reload();
+      lastLoadedVersion.current = dataVersion;
+    }
+  }, [isActive, dataVersion]);
 
   // Compute filtered sessions
   const sessions = useMemo(() => {
@@ -2688,6 +2707,7 @@ function Stats({ showSearchModal, setShowSearchModal }: { showSearchModal: boole
       setTimeout(async () => {
         try {
           await deleteSessionFromDB(id);
+          onDataChanged(); // Notify App that data changed
         } catch (err) {
           console.error('Delete error:', err);
           // Restore session on error
@@ -2727,6 +2747,7 @@ function Stats({ showSearchModal, setShowSearchModal }: { showSearchModal: boole
         const d = JSON.parse(evt.target?.result as string);
         if (Array.isArray(d.sessions)) {
           for (const s of d.sessions) await saveSessionToDB(s);
+          onDataChanged(); // Notify App that data changed
           reload();
           alert('Import gelukt!');
         } else {

@@ -17,8 +17,7 @@
       "react",
       "react-dom"
     ],
-    "noEmitOnError": false,
-    "outDir": "./dist"
+    "noEmitOnError": false
   },
   "include": [
     "index.tsx"

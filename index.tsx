@@ -2178,7 +2178,7 @@ function Calculator({ onDiffChange, isActive, onSessionSaved }: { onDiffChange: 
     entries.forEach(e => lines.push(`• ${e.name}: ${e.amount > 0 ? '+' : ''}${euro(e.amount)}`));
     lines.push('', 'Tikkies:');
     if (!result.transfers.length) lines.push('Niemand hoeft te betalen.');
-    else result.transfers.forEach((t: any) => lines.push(`• ${t.from} → ${t.to}: ${euro(t.amount)}`)); // Payer -> Receiver
+    else result.transfers.forEach((t: any) => lines.push(`• ${t.to} → ${t.from}: ${euro(t.amount)}`)); // Receiver sends tikkie to Payer
 
     if (autoBalanceInfo) lines.push('', autoBalanceInfo);
 
@@ -2683,7 +2683,7 @@ function Stats({ showSearchModal, setShowSearchModal, isActive, dataVersion, onD
         type: 'line', data: { labels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 16 } } },
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, padding: 10, font: { size: 11 } } } },
           scales: {
             x: { display: false, grid: { color: gridColor } },
             y: { grid: { color: gridColor } }

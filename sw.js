@@ -10,6 +10,7 @@ self.addEventListener('install', (e) => {
     e.waitUntil(
         caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
     );
+    self.skipWaiting(); // Immediately activate new service worker
 });
 
 self.addEventListener('fetch', (e) => {
@@ -28,7 +29,7 @@ self.addEventListener('activate', (e) => {
                     if (key !== CACHE_NAME) return caches.delete(key);
                 })
             );
-        })
+        }).then(() => self.clients.claim()) // Take control of all pages immediately
     );
 });
 
